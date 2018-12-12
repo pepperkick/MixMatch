@@ -58,8 +58,8 @@ module.exports = (app) => {
           await newPlayer.save();
   
           log(`Saved new user ${profile.username}`);
-          log(`Discord: ${user.id}`);
-          log(`Steam: ${user.steam}`);
+          log(`Discord: ${newPlayer.id}`);
+          log(`Steam: ${newPlayer.steam}`);
   
           Discord.assignRole(profile.id, config.guild, config.roles.player);
   
