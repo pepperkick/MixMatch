@@ -24,7 +24,7 @@ module.exports = async (app) => {
         if (message.author.bot) return;                     // Filter messages sent by other bots
 
         log(`Message from ${message.author.id} (${message.author.username}) at ${message.channel.id}: ${message.content}`);
-        
+
         em.emit('message', message);
     });
 
@@ -56,6 +56,21 @@ module.exports = async (app) => {
         return bot.users.get(id).dmChannel;
     }
 
+    async function assignRole(id, _guild, role) {
+        const guild = await bot.guilds.get(_guild);
+        const member = await guild.members.get(id);
+    
+        if (!guild) {
+            throw new Error(`Failed to find guild with id ${_guild}`);
+        }
+
+        if (!member) {
+            throw new Error(`Failed to find member with id ${id}`);
+        }
+
+        await member.addRole(role);
+    }
+
     function on(event, callback) {
         em.on(event, callback);
     }
@@ -63,7 +78,7 @@ module.exports = async (app) => {
     try {
         await bot.login(app.config.discord.token);
 
-        return { sendToChannel, getDMChannel, on };
+        return { sendToChannel, getDMChannel, assignRole, on };
     } catch (error) {
         log(error);
 

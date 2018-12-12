@@ -3,6 +3,8 @@ const DiscordStrategy = require('passport-discord');
 const SteamID = require('steamid');
 
 module.exports = (app) => {
+    router.use(Passport.initialize());
+
     passport.use(new DiscordStrategy({
         clientID: app.config.discord.client_id,
         clientSecret: app.config.discord.client_secret,
@@ -10,64 +12,64 @@ module.exports = (app) => {
         scope: app.config.discord.scope
       },
       async (accessToken, refreshToken, profile, done) => {
-        // const Player = app.models.Player;
-        // const Discord = app.services.Discord;
+        const Player = app.connection.model('Player');
+        const Discord = app.discord;
   
-        // log(accessToken);
-        // log(refreshToken);
-        // log(profile);
+        log(accessToken);
+        log(refreshToken);
+        log(profile);
   
-        // let user = await Player.findById(profile.id);
+        let player = await Player.findByDiscord(profile.id);
   
-        // if (user) {
-        //   return done(null, profile);
-        // }
+        if (player) {
+          return done(null, profile);
+        }
   
-        // const steamIDs = [];
+        const steamIDs = [];
   
-        // for (const connection of profile.connections) {
-        //   if (connection.type === 'steam') {
-        //     steamIDs.push(connection.id);
-        //   }
-        // }
+        for (const connection of profile.connections) {
+          if (connection.type === 'steam') {
+            steamIDs.push(connection.id);
+          }
+        }
   
-        // if (steamIDs.length === 1) {
-        //   user = await Player.find({ where: { steam: steamIDs[0] }});
+        if (steamIDs.length > 0) {
+          const prevPlayers = await Player.find({ where: { steam: steamIDs[0] }});
   
-        //   if (user.length !== 0) {
-        //     return Discord.sendDm(profile.id, {
-        //       text: "An user already exists with the connected steam id, if you are the owner of steam account or cannot access your original discord account then please contact admin to resolve this issue."
-        //     });
-        //   }
+          if (prevPlayers.length !== 0) {
+            return Discord.sendDm(profile.id, {
+              text: "An user already exists with the connected steam id, if you are the owner of steam account or cannot access your original discord account then please contact admin to resolve this issue."
+            });
+          }
   
-        //   let sid = new SteamID(steamIDs[0]);
-        //   sid.instance = SteamID.Instance.DESKTOP // 1
+          let sid = new SteamID(steamIDs[0]);
+          sid.instance = SteamID.Instance.DESKTOP // 1
   
-        //   user = new Player({
-        //     id: profile.id,
-        //     steam: sid.getSteamID64()
-        //   });
+          const newPlayer = new Player({
+            discord: profile.id,
+            steam: sid.getSteamID64()
+          });
   
-        //   await user.save();
+          await newPlayer.save();
   
-        //   log(`Saved new user ${profile.username}`);
-        //   log(`Discord: ${user.id}`);
-        //   log(`Steam: ${user.steam}`);
+          log(`Saved new user ${profile.username}`);
+          log(`Discord: ${user.id}`);
+          log(`Steam: ${user.steam}`);
   
-        //   Discord.assignRole(profile.id, config.guild, config.roles.player);
+          Discord.assignRole(profile.id, config.guild, config.roles.player);
   
-        //   Discord.sendDm(profile.id, {
-        //     text: "Thank you for registering with us!"
-        //   });
+          Discord.sendDm(profile.id, {
+            text: "Thank you for registering with us!"
+          });
   
-        //   return done(null, profile);
-        // }
+          return done(null, profile);
+        }
   
-        // Discord.sendDm(profile.id, {
-        //   text: "You need to connect your steam account with discord to continue."
-        // });
+        Discord.sendDm(profile.id, {
+          text: "You need to connect your steam account with discord to continue."
+        });
   
-        // done("No steam connection, you need to connect your steam account with discord", null);
+        done("No steam connection", null);
   
         // TODO: Handle multiple steam connections (Discord menu system has to be made)
       }
@@ -80,4 +82,6 @@ module.exports = (app) => {
             }
         }) (req, res, next);
     });
+
+    return router;
 }
