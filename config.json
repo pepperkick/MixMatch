@@ -1,0 +1,24 @@
+{
+    "host": "localhost",
+    "port": 8080,
+    "connection": "",
+    "discord": {
+        "token": "",
+        "guild": "",
+        "client_id": "",
+        "client_secret": "",
+        "scope": [
+            "identify",
+            "connections"
+        ],    
+        "channels": {
+            "main": "",
+            "errorLog": ""
+        },
+        "roles": {
+            "admin": "",
+            "captain": "",
+            "player": ""
+        }
+    }
+}
