@@ -19,6 +19,7 @@ module.exports = (app) => {
       async (accessToken, refreshToken, profile, done) => {
         const Player = app.connection.model('Player');
         const Discord = app.discord;
+        const DMChannel = Discord.getDMChannel(profile.id);
   
         log(accessToken);
         log(refreshToken);
@@ -42,7 +43,7 @@ module.exports = (app) => {
           const prevPlayers = await Player.find({ where: { steam: steamIDs[0] }});
   
           if (prevPlayers.length !== 0) {
-            return Discord.sendDm(profile.id, {
+            return Discord.sendDm(DMChannel, {
               text: "An user already exists with the connected steam id, if you are the owner of steam account or cannot access your original discord account then please contact admin to resolve this issue."
             });
           }
@@ -63,14 +64,14 @@ module.exports = (app) => {
   
           Discord.assignRole(profile.id, app.config.discord.guild, app.config.discord.roles.player);
   
-          Discord.sendDm(profile.id, {
+          Discord.sendToChannel(DMChannel, {
             text: "Thank you for registering with us!"
           });
   
           return done(null, profile);
         }
   
-        Discord.sendDm(profile.id, {
+        Discord.sendDm(DMChannel, {
           text: "You need to connect your steam account with discord to continue."
         });
   

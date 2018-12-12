@@ -53,7 +53,17 @@ module.exports = async (app) => {
     }      
 
     async function getDMChannel(id) {
-        return bot.users.get(id).dmChannel;
+        let channel = await bot.users.get(id).dmChannel;
+
+        if (!channel) {
+            channel = await member.user.createDM();  
+        }
+
+        if (!channel) {
+            throw new Error("Failed to get DM Channel for user", id);
+        }
+
+        return channel;
     }
 
     async function assignRole(id, _guild, role) {
