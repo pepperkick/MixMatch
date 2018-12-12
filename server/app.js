@@ -1,9 +1,11 @@
 const express = require('express');
-
 const servgen = require('@abskmj/servgen');
+const debug = require('debug');
 
 const bot  = require('./bot');
 const router = require('./routes/index');
+
+const log = debug("app:main");
 
 module.exports.init = async() => {
     // initialize services
@@ -19,5 +21,5 @@ module.exports.init = async() => {
     
     app.listen(app.config.port);
     
-    console.log('application listening on port', app.config.port);
+    log('application listening on port', app.config.port);
 }

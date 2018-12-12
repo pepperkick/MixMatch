@@ -1,9 +1,14 @@
+const express = require('express');
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord');
 const SteamID = require('steamid');
 
+const log = require('debug')('app:routes:auth:discord');
+
 module.exports = (app) => {
-    router.use(Passport.initialize());
+    const router = express.Router();
+
+    router.use(passport.initialize());
 
     passport.use(new DiscordStrategy({
         clientID: app.config.discord.client_id,
@@ -76,7 +81,7 @@ module.exports = (app) => {
     ));
   
     router.get(['/', '/return'], (req, res, next) => {
-        Passport.authenticate('discord', function(err, user, info) {
+        passport.authenticate('discord', function(err, user, info) {
             if (user) {
                 res.send('Success, you can close this window now!');
             }
