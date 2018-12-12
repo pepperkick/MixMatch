@@ -21,16 +21,16 @@ module.exports = (app) => {
         const parameters = message.content.split(' ');
         parameters[0] = parameters[0].split(config.prefix)[1];
         
-        const parameters = {
+        const args = {
             command: parameters[0],
             message
         }
-        const command = await Command.Search(parameters);
+        const command = await Command.Search(args);
 
         if (command) {
             log(`Executing ${command.command}...`);
     
-            command.execute(parameters);
+            command.execute(args);
         }
     });
 
