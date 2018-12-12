@@ -52,11 +52,16 @@ module.exports = async (app) => {
         return message;
     }      
 
+    async function getUser(id) {
+        return await bot.users.get(id);
+    }
+
     async function getDMChannel(id) {
         let channel = await bot.users.get(id).dmChannel;
 
         if (!channel) {
-            channel = await member.user.createDM();  
+            const user = await getUser(id);
+            channel = await user.createDM();  
         }
 
         if (!channel) {
