@@ -57,16 +57,18 @@ module.exports = async (app) => {
     }
 
     async function getDMChannel(id) {
-        let channel = await bot.users.get(id).dmChannel;
+        const user = await getUser(id);
+        let channel = await user.dmChannel;
 
         if (!channel) {
-            const user = await getUser(id);
             channel = await user.createDM();  
         }
 
         if (!channel) {
             throw new Error("Failed to get DM Channel for user", id);
         }
+
+        log("User DM Channel", channel.id);
 
         return channel;
     }

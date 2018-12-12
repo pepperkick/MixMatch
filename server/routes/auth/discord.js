@@ -19,7 +19,7 @@ module.exports = (app) => {
       async (accessToken, refreshToken, profile, done) => {
         const Player = app.connection.model('Player');
         const Discord = app.discord;
-        const DMChannel = Discord.getDMChannel(profile.id);
+        const DMChannel = await Discord.getDMChannel(profile.id);
   
         log(accessToken);
         log(refreshToken);
