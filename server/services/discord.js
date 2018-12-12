@@ -23,8 +23,6 @@ module.exports = async (app) => {
         if (message.author.id === bot.user.id) return;      // Filter messages sent by the bot itself
         if (message.author.bot) return;                     // Filter messages sent by other bots
 
-        log(`Message from ${message.author.id} (${message.author.username}) at ${message.channel.id}: ${message.content}`);
-
         em.emit('message', message);
     });
 

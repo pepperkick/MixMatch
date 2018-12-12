@@ -1,3 +1,7 @@
+const debug = require('debug');
+
+const log = debug("app:bot");
+
 module.exports = (app) => {
     const Command = app.object.command;
 
@@ -14,15 +18,18 @@ module.exports = (app) => {
         }
     });
 
-    app.discord.on("message", async message => {        
+    app.discord.on("message", async message => {  
         if (message.content[0] !== app.config.discord.prefix) return;
-        if (message.guild.id !== config.guild) return;
-        
+        if (message.guild.id !== app.config.discord.guild) return;
+
+        log(`Message from ${message.author.id} (${message.author.username}) at ${message.channel.id}: ${message.content}`);
+
         const parameters = message.content.split(' ');
-        parameters[0] = parameters[0].split(config.prefix)[1];
+        parameters[0] = parameters[0].split(app.config.discord.prefix)[1];
         
         const args = {
             command: parameters[0],
+            channel: message.channel.id,
             message
         }
         const command = await Command.Search(args);
@@ -30,11 +37,19 @@ module.exports = (app) => {
         if (command) {
             log(`Executing ${command.command}...`);
     
-            command.execute(args);
+            try {
+                await command.execute(args);
+            } catch (error) {
+                log(error);
+
+                await message.reply(error.message);
+            }
         }
     });
 
-    Command.Register('ping', (args) => {
+    Command.Register({ 
+        command: 'ping'
+    }, (args) => {
         args.message.reply("Pong!");
     });
 };
