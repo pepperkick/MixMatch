@@ -65,7 +65,7 @@ module.exports = (app) => {
           Discord.assignRole(profile.id, app.config.discord.guild, app.config.discord.roles.player);
   
           Discord.sendToChannel(DMChannel, {
-            text: "Thank you for registering with us!"
+            text: "Thank you for joining with us!"
           });
   
           return done(null, profile);
