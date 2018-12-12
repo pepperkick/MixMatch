@@ -61,7 +61,7 @@ module.exports = (app) => {
           log(`Discord: ${newPlayer.id}`);
           log(`Steam: ${newPlayer.steam}`);
   
-          Discord.assignRole(profile.id, config.guild, config.roles.player);
+          Discord.assignRole(profile.id, app.config.discord.guild, app.config.discord.roles.player);
   
           Discord.sendDm(profile.id, {
             text: "Thank you for registering with us!"
