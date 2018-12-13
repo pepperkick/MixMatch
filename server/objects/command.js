@@ -55,9 +55,9 @@ module.exports = class {
     }
 
     static Register(parameters, callback) {
-        const prevCommand = this.Search(parameters);
+        const command_prev = this.Search(parameters);
 
-        if (prevCommand) {
+        if (command_prev) {
             throw new Error(`Command "${parameters.command}" is already registered`);
         }
   

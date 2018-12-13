@@ -1,7 +1,6 @@
 const events = require('events');
 
 module.exports = (schema, options) => {
-    
     const em =new events.EventEmitter()
     
     schema.statics.events = em;

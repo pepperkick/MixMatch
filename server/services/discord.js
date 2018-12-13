@@ -56,6 +56,10 @@ module.exports = async (app) => {
         return await bot.users.get(id);
     }
 
+    async function getMember(guild, id) {
+        return await await bot.guilds.get(guild).members.get(member);
+    }
+
     async function getDMChannel(id) {
         const user = await getUser(id);
         let channel = await user.dmChannel;
@@ -95,7 +99,7 @@ module.exports = async (app) => {
     try {
         await bot.login(app.config.discord.token);
 
-        return { sendToChannel, getDMChannel, assignRole, on };
+        return { sendToChannel, getDMChannel, getUser, getMember, assignRole, on, core: bot };
     } catch (error) {
         log(error);
 

@@ -119,9 +119,9 @@ module.exports = (schema) => {
     }
 
     schema.methods.sendDiscordMessage = async function (message) {
-        this.events.emit("discord_send_message", {
+        this.model("Server").events.emit("discord_send_message", {
             doc: this,
             message
-        })
+        });
     }
 }

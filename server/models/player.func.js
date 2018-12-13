@@ -47,6 +47,12 @@ module.exports = (schema) => {
         this.status = statuses.JOINED;
         this.server = server.id;
 
+        this.changeDiscordNickname(`[${server.name}] <nickname>`, `Joined ${server.name}`);
+
         await this.save();
+    }
+
+    schema.methods.changeDiscordNickname = async function (name, reason) {
+        this.model("PLayer").events.emit("discord_change_nickname", { doc: this, name, reason });
     }
 }

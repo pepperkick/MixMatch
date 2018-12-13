@@ -4,6 +4,7 @@ module.exports = {
     name: "Player",
     plugins: {
         timestamps: true,
+        events: true,
     },
     schema: {
         steam: String,
