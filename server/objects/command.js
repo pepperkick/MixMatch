@@ -1,6 +1,6 @@
 const debug = require('debug');
 
-const log = debug("app:services:command");
+const log = debug("app:object:command");
 const Commands = [];
 
 module.exports = class {
@@ -43,8 +43,6 @@ module.exports = class {
     }
 
     static Search(parameters) {
-        log(parameters);
-
         for (const command of Commands) {
             if (command.command === parameters.command);
             else continue;

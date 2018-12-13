@@ -40,9 +40,9 @@ module.exports = (app) => {
         }
   
         if (steamIDs.length > 0) {
-          const prevPlayers = await Player.find({ where: { steam: steamIDs[0] }});
+          const player_prev = await Player.findOne({ steam: steamIDs[0] });
   
-          if (prevPlayers.length !== 0) {
+          if (player_prev) {
             return Discord.sendDm(DMChannel, {
               text: "An user already exists with the connected steam id, if you are the owner of steam account or cannot access your original discord account then please contact admin to resolve this issue."
             });
@@ -51,16 +51,16 @@ module.exports = (app) => {
           let sid = new SteamID(steamIDs[0]);
           sid.instance = SteamID.Instance.DESKTOP // 1
   
-          const newPlayer = new Player({
+          const player_new = new Player({
             discord: profile.id,
             steam: sid.getSteamID64()
           });
   
-          await newPlayer.save();
+          await player_new.save();
   
           log(`Saved new user ${profile.username}`);
-          log(`Discord: ${newPlayer.id}`);
-          log(`Steam: ${newPlayer.steam}`);
+          log(`Discord: ${player_new.id}`);
+          log(`Steam: ${player_new.steam}`);
   
           Discord.assignRole(profile.id, app.config.discord.guild, app.config.discord.roles.player);
   

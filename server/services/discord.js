@@ -35,6 +35,8 @@ module.exports = async (app) => {
         em.emit("newMember", member);
     });
 
+    bot.on('error', log);
+
     // Sends a message to a channel
     async function sendToChannel(channel, options) {
         if (typeof channel === String) {

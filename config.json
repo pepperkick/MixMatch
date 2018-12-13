@@ -4,13 +4,14 @@
     "connection": "",
     "discord": {
         "token": "",
-        "guild": "",
         "client_id": "",
         "client_secret": "",
         "scope": [
             "identify",
             "connections"
         ],    
+        "prefix": "",
+        "guild": "",
         "channels": {
             "main": "",
             "errorLog": ""
@@ -20,5 +21,14 @@
             "captain": "",
             "player": ""
         }
-    }
+    },
+    "servers": [
+        {
+            "name": "",
+            "ip": "",
+            "port": "",
+            "rcon": "",
+            "channel": ""
+        }
+    ]
 }

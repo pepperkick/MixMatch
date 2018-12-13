@@ -3,7 +3,9 @@ const servgen = require('@abskmj/servgen');
 const debug = require('debug');
 
 const bot  = require('./bot');
+
 const router = require('./routes/index');
+const events = require('./events/index');
 
 const log = debug("app:main");
 
@@ -15,6 +17,9 @@ module.exports.init = async() => {
     
     // attach bot
     bot(app);
+
+    // attach events
+    events(app);
     
     // attach routes
     app.use(router(app));

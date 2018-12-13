@@ -1,17 +1,21 @@
 const mongoose = require('mongoose');
 
 module.exports = {
-    name: "Player",
+    name: "Server",
     plugins: {
         timestamps: true,
+        events: true,
     },
     schema: {
-        steam: String,
-        discord: String,
-        server: {
+        name: String,
+        ip: String,
+        port: String,
+        rcon: String,
+        channel: String,
+        players: [{
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Server'
-        }
+            ref: "Player"
+        }]
     },
     options: {
         versionKey: false
