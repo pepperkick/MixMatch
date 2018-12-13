@@ -46,4 +46,12 @@ module.exports = app => {
             }
         }
     });
+
+    Discord.on("error", async (error) => {
+        if (error.code === "ECONNRESET") {
+            log("Discord socket disconnected");
+
+            await Discord.login();
+        }
+    });
 }

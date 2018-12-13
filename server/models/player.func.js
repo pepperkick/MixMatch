@@ -30,7 +30,7 @@ module.exports = (schema) => {
 
     schema.statics.checkOrGet = async function (player) {
         if (typeof player == String || typeof player == "string" || typeof player == Number) {
-            return this.findByDiscord(player);
+            return this.findById(player);
         }
 
         return player;

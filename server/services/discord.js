@@ -35,13 +35,17 @@ module.exports = async (app) => {
         em.emit("newMember", member);
     });
 
-    bot.on('error', log);
+    bot.on('error', async (error) => {
+        em.emit("error", error);
+    });
 
     // Sends a message to a channel
     async function sendToChannel(channel, options) {
-        if (typeof channel === String) {
-            channel = bot.channels.get(channel);
+        if (typeof channel === String || typeof channel == "string" || typeof channel === Number) {
+            channel = await bot.channels.get(channel);
         }
+
+        log(channel.id);
 
         const message = await channel.send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
       
@@ -57,7 +61,7 @@ module.exports = async (app) => {
     }
 
     async function getMember(guild, id) {
-        return await await bot.guilds.get(guild).members.get(member);
+        return await await bot.guilds.get(guild).members.get(id);
     }
 
     async function getDMChannel(id) {
@@ -92,14 +96,18 @@ module.exports = async (app) => {
         await member.addRole(role);
     }
 
+    async function login() {
+        await bot.login(app.config.discord.token);
+    }
+
     function on(event, callback) {
         em.on(event, callback);
     }
 
     try {
-        await bot.login(app.config.discord.token);
+        await login();
 
-        return { sendToChannel, getDMChannel, getUser, getMember, assignRole, on, core: bot };
+        return { login, sendToChannel, getDMChannel, getUser, getMember, assignRole, on, core: bot };
     } catch (error) {
         log(error);
 

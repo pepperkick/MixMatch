@@ -8,6 +8,7 @@ module.exports = async (app) => {
     const Server = app.connection.model("Server");
     const Player = app.connection.model("Player");
     const Command = app.object.command;
+    const Discord = app.discord;
 
     Command.Register({ 
         command: 'ping'
@@ -21,12 +22,11 @@ module.exports = async (app) => {
         const player = await Player.findByDiscord(args.message.author.id);
 
         if (player) {
-            args.message.reply("You have already registered with us!");
+            await args.message.reply("You have already registered with us!");
         } else {
-            args.message.reply(`It seems like you have not registered with us, please visit the following link to register with us so you can enjoy the matches.\nhttp://${app.config.host}:${app.config.port}/auth/discor`)
+            await args.message.reply(`It seems like you have not registered with us, please visit the following link to register with us so you can enjoy the matches.\nhttp://${app.config.host}:${app.config.port}/auth/discor`)
         }
     });
-
 
     const servers = app.config.servers;
     for (let name in servers) {
@@ -83,6 +83,14 @@ module.exports = async (app) => {
         });
 
         Command.Register({ 
+            command: 'status',
+            channel: server.channel,
+            role: [ app.config.discord.roles.player ]
+        }, async (args) => {
+            await getServerStatus(args, server)
+        });
+
+        Command.Register({ 
             command: 'format',
             channel: server.channel,
             role: [ app.config.discord.roles.admin ]
@@ -132,6 +140,65 @@ module.exports = async (app) => {
             } else {
                 await args.message.reply('Failed due to internal error, please try again later.');
             }
+        }
+    }
+
+    async function getServerStatus(args, server) {
+        try {
+            const fields = [];
+            const format = server.format;
+            
+            const embed = {
+                color: 0x00BCD4,
+                title: `Server ${server.name}`,
+                fields,
+                timestamp: new Date()
+            }
+
+            if (server.status === Server.status.FREE) {
+                fields.push({
+                    name: 'Status',
+                    value: 'Waiting for enough players to join'
+                });
+            }
+            
+            fields.push({
+                name: 'Format',
+                value: format,
+                inline: true
+            });        
+
+            fields.push({
+                name: 'Number of Players',
+                value: `${server.players.length} / ${app.config.formats[format].size * 2}`,
+                inline: true
+            });
+
+            if (server.players.length === 0) {
+                fields.push({
+                    name: 'Players',
+                    value: 'No players have currently joined'
+                });
+            } else {
+                let players = '';
+
+                for (const player_id of server.players) {
+                    const player = await Player.findById(player_id);
+                    const user = await Discord.getUser(player.discord);
+
+                    players += `${user.username}\n`;
+                }
+
+                fields.push({
+                    name: 'Players',
+                    value: players
+                });
+            }
+
+            await Discord.sendToChannel(server.channel, { embed });
+        } catch (error) {
+            log(`Failed to send status message for server ${server.name}`);
+            log(error);
         }
     }
 
