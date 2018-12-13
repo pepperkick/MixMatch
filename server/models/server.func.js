@@ -31,11 +31,15 @@ module.exports = (schema) => {
         return await this.findOne({ ip, port });
     }
 
-    schema.methods.free = async function () {
+    schema.methods.setFree = async function () {
         this.status = statuses.FREE;
 
         await this.removeAllPlayers();
         await this.save();
+    }
+
+    schema.methods.isFree = async function () {
+        return this.status === statuses.FREE;
     }
 
     schema.methods.addPlayer = async function (player) {
@@ -45,13 +49,13 @@ module.exports = (schema) => {
         if (!player)
             throw new Exception("PLAYER_NOT_FOUND", `Player ${player.id} not found!`);
 
-        if (player.server.id == this.id) 
+        if (player.server && player.server.id == this.id) 
             throw new Exception("PLAYER_ALREADY_IN_CURRENT_QUEUE", `Player ${player.id} is already in current queue`);
 
         if (player.server !== null) 
             throw new Exception("PLAYER_ALREADY_IN_QUEUE", `Player ${player.id} is already in queue ${player.server.id}`);
 
-        if (this.status !== statuses.FREE)
+        if (!this.isFree())
             throw new Exception("SERVER_NOT_FREE", `Server status is currently ${this.status} which needs to be ${statuses.FREE} for player to join.`);
 
         this.players.push(player.id);
@@ -71,10 +75,10 @@ module.exports = (schema) => {
         if (player.server === null) 
             throw new Exception("PLAYER_NOT_IN_QUEUE", `Player ${player.id} is not in any queue`);
 
-        if (player.server.id != this.id) 
+        if (player.server && player.server.id != this.id) 
             throw new Exception("PLAYER_NOT_IN_CURRENT_QUEUE", `Player ${player.id} is not in current queue`);
 
-        if (this.status !== statuses.FREE)
+        if (!this.isFree())
             throw new Exception("SERVER_NOT_FREE", `Server status is currently ${this.status} which needs to be ${statuses.FREE} for player to join.`);
 
         for (const i in this.players) {
@@ -97,6 +101,21 @@ module.exports = (schema) => {
         for (let i in this.players) {
             await this.removePlayer(players[i]);
         }
+    }
+
+    schema.methods.changeFormat = async function (format) {
+        if (this.format === format)
+            throw new Exception("FORMAT_SAME", `Server format is already ${format}`);
+
+        if (!this.isFree())
+            throw new Exception("SERVER_NOT_FREE", `Server status is currently ${this.status} which needs to be ${statuses.FREE} for player to join.`);
+
+        if (this.players.length !== 0)
+            throw new Exception("QUEUE_NOT_FREE", `Server's queue currently has players, the server format cannot change while players still in queue. `);
+
+        this.format = format;
+
+        await this.save();
     }
 
     schema.methods.sendDiscordMessage = async function (message) {

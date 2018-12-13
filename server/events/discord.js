@@ -29,6 +29,7 @@ module.exports = app => {
         const args = {
             command: parameters[0],
             channel: message.channel.id,
+            parameters,
             message
         }
         const command = await Command.Search(args);

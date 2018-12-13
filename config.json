@@ -22,19 +22,19 @@
             "player": ""
         }
     },
-    "servers": [
-        {
-            "name": "",
+    "servers": {
+        "Name": {
             "ip": "",
             "port": "",
             "rcon": "",
             "channel": "",
             "formats": []
         }
-    ],
+    },
     "formats": {
-        "type": {
-            "size": 0
+        "Type": {
+            "size": 0,
+            "hidden": false
         }
     }
 }
