@@ -28,7 +28,13 @@
             "ip": "",
             "port": "",
             "rcon": "",
-            "channel": ""
+            "channel": "",
+            "formats": []
         }
-    ]
+    ],
+    "formats": {
+        "type": {
+            "size": 0
+        }
+    }
 }

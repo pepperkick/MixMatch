@@ -38,7 +38,8 @@ module.exports = async (app) => {
                 ip: server_config.ip,
                 port: server_config.port,
                 rcon: server_config.rcon,
-                channel: server_config.channel
+                channel: server_config.channel,
+                format: server_config.formats[0]
             });
 
             try {

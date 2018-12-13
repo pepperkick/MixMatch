@@ -13,26 +13,15 @@ module.exports = (schema) => {
         ENDED: 'ended'
     });
 
-    const formats = Object.freeze({
-        SIXES: "6v6",
-        FOURS: "4v4"
-    });
-
     schema.add({
         status: {
             type: String,
             enum: Object.values(statuses),
             default: statuses.UNKNOWN
-        },
-        format: {
-            type: String,
-            enum: Object.values(formats),
-            default: formats.SIXES
         }
     });
 
     schema.statics.status = statuses;
-    schema.statics.format = formats;
 
     schema.statics.findByName = async function (name) {
         return await this.findOne({ name });
