@@ -11,7 +11,8 @@ module.exports = {
         discord: String,
         server: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Server'
+            ref: 'Server',
+            default: null
         }
     },
     options: {
