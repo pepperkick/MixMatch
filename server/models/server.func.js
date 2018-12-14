@@ -38,7 +38,7 @@ module.exports = (schema) => {
         await this.save();
     }
 
-    schema.methods.isFree = async function () {
+    schema.methods.isFree = function () {
         return this.status === statuses.FREE;
     }
 
