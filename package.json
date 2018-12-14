@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node .",
     "dev": "cross-env NODE_ENV=development DEBUG=app:* nodemon .",
-    "test": "mocha --bail"
+    "test": "mocha --bail",
+    "test-config": "yarn test -g Configuration",
+    "test-discord": "yarn test -g Discord",
+    "test-db": "yarn test -g Database"
   },
   "author": "PepperKick",
   "license": "ISC",

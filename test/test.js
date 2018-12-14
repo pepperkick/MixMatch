@@ -3,8 +3,19 @@ const mongoose = require('mongoose');
 const Discord = require('discord.js');
 const mongen = require('@abskmj/mongen');
 
-// const app = require("../server/app").init();
-const config = require("../config.development.json");
+// const app = require("../server/app").init();const env = process.env.NODE_ENV;
+
+const env = process.env.NODE_ENV;
+
+let config
+
+if (env) {
+    const path = `../config.${env}.json`;
+    config = require(path);
+} else {
+    config = require('../config.json');
+}
+
 const config_test = require("./config.json");
 
 describe("Configuration", function () {
