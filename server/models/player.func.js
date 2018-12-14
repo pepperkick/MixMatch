@@ -17,7 +17,7 @@ module.exports = (schema) => {
     schema.statics.status = statuses;
 
     schema.statics.findByDiscord = async function (user) {
-        if (typeof user === String || typeof user == "string" || typeof user === Number) {
+        if (typeof user === 'string') {
             return await this.findOne({ discord: user });
         }
 
@@ -29,8 +29,12 @@ module.exports = (schema) => {
     }
 
     schema.statics.checkOrGet = async function (player) {
-        if (typeof player == String || typeof player == "string" || typeof player == Number) {
+        if (typeof user === 'string') {
             return this.findById(player);
+        }
+
+        if (!player.status) {
+            return this.findById(player);            
         }
 
         return player;
@@ -53,6 +57,6 @@ module.exports = (schema) => {
     }
 
     schema.methods.changeDiscordNickname = async function (name, reason) {
-        this.model("PLayer").events.emit("discord_change_nickname", { doc: this, name, reason });
+        this.model("Player").events.emit("discord_change_nickname", { doc: this, name, reason });
     }
 }

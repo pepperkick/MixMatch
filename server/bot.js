@@ -97,11 +97,21 @@ module.exports = async (app) => {
         }, async (args) => {
             await changeServerFormat(args, server)
         });
+
+        Command.Register({ 
+            command: 'reset',
+            channel: server.channel,
+            role: [ app.config.discord.roles.admin ]
+        }, async (args) => {
+            await resetServer(args, server)
+        });
     }
 
     async function addPlayerServer(args, server, player_id) {
         try {
-            await server.addPlayer(player_id);            
+            const player = await Player.findByDiscord(player_id);
+            
+            await server.addPlayer(player);            
             await args.message.reply('You have successfully joined the queue');
         } catch (error) {
             log(`Failed to add player ${player_id} to server ${server.name}`);
@@ -123,7 +133,9 @@ module.exports = async (app) => {
 
     async function removePlayerServer(args, server, player_id) {
         try {
-            await server.removePlayer(player_id);            
+            const player = await Player.findByDiscord(player_id);
+
+            await server.removePlayer(player);            
             await args.message.reply('You have successfully left the queue');
         } catch (error) {
             log(`Failed to remove player ${player_id} from server ${server.name}`);
@@ -230,7 +242,7 @@ module.exports = async (app) => {
             }
 
             await server.changeFormat(format);
-            await args.message.reply(`Successfully changed the server format to ${format}`);
+            await args.message.reply(`Successfully changed the queue format to ${format}`);
         } catch (error) {
             log(`Failed to change format of server ${server.name} to ${format}`);
             log(error);
@@ -246,6 +258,17 @@ module.exports = async (app) => {
             } else {
                 await args.message.reply('Failed due to internal error, please try again later.');
             }
+        }
+    }
+
+    async function resetServer(args, server) {
+        try {
+            await server.removeAllPlayers();
+
+            await args.message.reply(`Successfully cleared the queue.`);
+        } catch (error) {
+            log(`Failed to reset the server ${server.name}`);
+            log(error);
         }
     }
 };

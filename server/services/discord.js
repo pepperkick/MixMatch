@@ -36,6 +36,12 @@ module.exports = async (app) => {
     });
 
     bot.on('error', async (error) => {
+        if (error.code === "ECONNRESET") {
+            log("Discord socket disconnected");
+
+            await Discord.login();
+        }
+        
         em.emit("error", error);
     });
 

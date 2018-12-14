@@ -98,8 +98,8 @@ module.exports = (schema) => {
     }
     
     schema.methods.removeAllPlayers = async function () {
-        for (let i in this.players) {
-            await this.removePlayer(players[i]);
+        for (const player of this.players) {
+            await this.removePlayer(player);
         }
     }
 
