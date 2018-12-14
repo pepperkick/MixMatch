@@ -320,6 +320,30 @@ describe("Database", async function () {
             await this.server.changeFormat("4v4");
 
             assert(this.server.format === "6v6", "Server format changed from 6v6");
+
+            await this.server.removeAllPlayers();
+        } catch (error) {
+            if (error.code) {
+                if (error.code === "ERR_ASSERTION") 
+                    throw error;
+            } else {
+                assert.fail(error);
+            }
+        }
+    });
+
+    it("should change server status to setup", async function () {
+        try {
+            await this.server.addPlayer(this.player1);
+            await this.server.addPlayer(this.player2);
+
+            if (server.players.length >= 1 * 2) {
+                server.status = Server.status.SETUP;
+
+                await server.save();
+            }
+
+            assert(this.server.status === this.Server.status.SETUP, "Player's status was not set to SETUP");
         } catch (error) {
             if (error.code) {
                 if (error.code === "ERR_ASSERTION") 
