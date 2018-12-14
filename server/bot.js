@@ -115,7 +115,6 @@ module.exports = async (app) => {
             await args.message.reply('You have successfully joined the queue');
         } catch (error) {
             log(`Failed to add player ${player_id} to server ${server.name}`);
-            log(error);
 
             if (error.code === "SERVER_NOT_FREE") {
                 await args.message.reply("Cannot join the queue at the moment.");
@@ -126,6 +125,8 @@ module.exports = async (app) => {
             } else if (error.code === "PLAYER_NOT_FOUND") {
                 await args.message.reply('Unable to process your request, please make sure that you have registered with the bot');
             } else {
+                log(error);
+
                 await args.message.reply('Failed due to internal error, please try again later.');
             }
         }
@@ -139,7 +140,6 @@ module.exports = async (app) => {
             await args.message.reply('You have successfully left the queue');
         } catch (error) {
             log(`Failed to remove player ${player_id} from server ${server.name}`);
-            log(error);
 
             if (error.code === "SERVER_NOT_FREE") {
                 await args.message.reply("Cannot join the queue at the moment.");
@@ -150,6 +150,56 @@ module.exports = async (app) => {
             } else if (error.code === "PLAYER_NOT_FOUND") {
                 await args.message.reply('Unable to process your request, please make sure that you have registered with the bot');
             } else {
+                log(error);
+
+                await args.message.reply('Failed due to internal error, please try again later.');
+            }
+        }
+    }
+
+    async function changeServerFormat(args, server) {
+        const server_config = app.config.servers[server.name];
+        const format = args.parameters[1];
+
+        if (!format) {
+            let format_list = "";
+            let format_show;
+            let count = 1;
+
+            for (let i in server_config.formats) {
+                if (!server_config.formats[i].hidden) {
+                    format_list += `${count}: ${server_config.formats[i]}\n`;
+
+                    if (!format_show) format_show = server_config.formats[i];
+
+                    count++;
+                }
+            }
+
+            return await args.message.reply(`\nCurrently supported formats are\n${format_list}\nYou can use the command like \`!format ${format_show}\``);    
+        }
+
+        try {
+            if (!server_config.formats.includes(format)) {
+                throw new Exception("FORMAT_NOT_SUPPORTED", `The format ${format} is not supported by queue ${server.name}`);
+            }
+
+            await server.changeFormat(format);
+            await args.message.reply(`Successfully changed the queue format to ${format}`);
+        } catch (error) {
+            log(`Failed to change format of server ${server.name} to ${format}`);
+
+            if (error.code === "FORMAT_NOT_SUPPORTED") {
+                await args.message.reply(`That format is currently not supported by the queue.`);
+            } else if (error.code === "FORMAT_SAME") {
+                await args.message.reply(`Queue is already in that format`);                
+            } else if (error.code === "SERVER_NOT_FREE") {
+                await args.message.reply("Cannot change the format at the moment.");                
+            } else if (error.code === "QUEUE_NOT_FREE") {
+                await args.message.reply("Cannot change the format as players are in queue.");                
+            } else {
+                log(error);
+
                 await args.message.reply('Failed due to internal error, please try again later.');
             }
         }
@@ -213,54 +263,7 @@ module.exports = async (app) => {
             log(error);
         }
     }
-
-    async function changeServerFormat(args, server) {
-        const server_config = app.config.servers[server.name];
-        const format = args.parameters[1];
-
-        if (!format) {
-            let format_list = "";
-            let format_show;
-            let count = 1;
-
-            for (let i in server_config.formats) {
-                if (!server_config.formats[i].hidden) {
-                    format_list += `${count}: ${server_config.formats[i]}\n`;
-
-                    if (!format_show) format_show = server_config.formats[i];
-
-                    count++;
-                }
-            }
-
-            return await args.message.reply(`\nCurrently supported formats are\n${format_list}\nYou can use the command like \`!format ${format_show}\``);    
-        }
-
-        try {
-            if (!server_config.formats.includes(format)) {
-                throw new Exception("FORMAT_NOT_SUPPORTED", `The format ${format} is not supported by queue ${server.name}`);
-            }
-
-            await server.changeFormat(format);
-            await args.message.reply(`Successfully changed the queue format to ${format}`);
-        } catch (error) {
-            log(`Failed to change format of server ${server.name} to ${format}`);
-            log(error);
-
-            if (error.code === "FORMAT_NOT_SUPPORTED") {
-                await args.message.reply(`That format is currently not supported by the queue.`);
-            } else if (error.code === "FORMAT_SAME") {
-                await args.message.reply(`Queue is already in that format`);                
-            } else if (error.code === "SERVER_NOT_FREE") {
-                await args.message.reply("Cannot change the format at the moment.");                
-            } else if (error.code === "QUEUE_NOT_FREE") {
-                await args.message.reply("Cannot change the format as players are in queue.");                
-            } else {
-                await args.message.reply('Failed due to internal error, please try again later.');
-            }
-        }
-    }
-
+    
     async function resetServer(args, server) {
         try {
             await server.removeAllPlayers();

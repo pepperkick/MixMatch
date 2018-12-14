@@ -9,7 +9,8 @@
     "test": "mocha --bail",
     "test-config": "yarn test -g Configuration",
     "test-discord": "yarn test -g Discord",
-    "test-db": "yarn test -g Database"
+    "test-db": "yarn test -g Database",
+    "build-sm": "spcomp -i plugin/include -o dist/mixmatch plugin/main.sp"
   },
   "author": "PepperKick",
   "license": "ISC",
