@@ -141,6 +141,7 @@ describe("Database", async function () {
     after(async function () {
         if (this.player1) await this.player1.delete();
         if (this.player2) await this.player2.delete();
+        if (this.server) await this.server.delete();
         await this.connection.disconnect();
     });
 
@@ -198,7 +199,135 @@ describe("Database", async function () {
         const player_obj1 = await this.Player.checkOrGet(this.player1);
         const player_obj2 = await this.Player.checkOrGet(this.player1.id);
 
-        assert(player_obj1.id === player_obj2.id, "'checkOrGet' failed to get the object");
+        assert(player_obj1, "'checkOrGet' failed to get the object from object");
+        assert(player_obj2, "'checkOrGet' failed to get the object from string id");
+    });
+
+    it("should create servers", async function () {
+        this.server = new this.Server({
+            name: "TEST",
+            ip: "1.1.1.1",
+            port: 80,
+            format: "6v6",
+            rcon: "test123",
+            channel: "12345"
+        });
+
+        try {
+            await this.server.save();
+
+            assert(this.server.status === this.Server.status.UNKNOWN, "Server status value did not set to UNKNOWN");
+            assert(!this.server.isFree(), "'isFree' function did not return false");
+            
+            await this.server.setFree();
+
+            assert(this.server.status === this.Server.status.FREE, "Server status value did not set to FREE");
+            assert(this.server.isFree(), "'isFree' function did not return true");
+        } catch (error) {
+            assert.fail(error);
+        }
+    });
+
+    it("should find servers", async function () {
+        const server_obj1 = await this.Server.findByName("TEST");
+        const server_obj2 = await this.Server.findByIp("1.1.1.1", 80);
+
+        assert(server_obj1, "Failed to get server from 'findByName' function");
+        assert(server_obj2, "Failed to get server from 'findByIp' function");
+    });
+
+    it("should put player in server", async function () {
+        try {
+            await this.server.addPlayer(this.player1);
+
+            assert(this.server.players.length === 1, "Players array length did not set to 1");
+            assert(this.player1.status === this.Player.status.JOINED, "Player's status was not set to JOINED");
+            assert(this.player1.server == this.server.id, "Player's server was not set to server id");
+
+            await this.server.addPlayer(this.player1);
+
+            assert(this.server.players.length === 1, "Players array length changed from 1");
+
+            await this.server.addPlayer(this.player2);
+
+            assert(this.server.players.length === 2, "Players array length did not set to 2");
+            assert(this.player2.status === this.Player.status.JOINED, "Player's status was not set to JOINED");
+            assert(this.player2.server == this.server.id, "Player's server was not set to server id");
+        } catch (error) {
+            if (error.code) {
+                if (error.code === "ERR_ASSERTION") 
+                    throw error;
+            } else {
+                assert.fail(error);
+            }
+        }
+    });
+    
+    it("should remove player from server", async function () {
+        try {
+            await this.server.removePlayer(this.player2);
+
+            assert(this.server.players.length === 1, "Players array length did not set to 1");
+            assert(this.player2.status === this.Player.status.FREE, "Player's status was not set to FREE");
+            assert(this.player2.server == null, "Player's server was not set to null");
+
+            await this.server.removePlayer(this.player2);
+            
+            assert(this.server.players.length === 1, "Players array length changed from 1");
+
+            await this.server.removePlayer(this.player1);
+
+            assert(this.server.players.length === 0, "Players array length did not set to 0");
+            assert(this.player1.status === this.Player.status.FREE, "Player's status was not set to FREE");
+            assert(this.player1.server == null, "Player's server was not set to null");
+        } catch (error) {
+            if (error.code) {
+                if (error.code === "ERR_ASSERTION") 
+                    throw error;
+            } else {
+                assert.fail(error);
+            }
+        }
+    });
+    
+    it("should reset server", async function () {
+        try {
+            await this.server.addPlayer(this.player1);
+            await this.server.addPlayer(this.player2);
+            
+            assert(this.server.players.length === 2, "Players array length did not set to 2");
+
+            await this.server.removeAllPlayers();
+
+            assert(this.server.players.length === 0, "Players array length did not set to 0");
+        } catch (error) {
+            if (error.code) {
+                if (error.code === "ERR_ASSERTION") 
+                    throw error;
+            } else {
+                assert.fail(error);
+            }
+        }
+    });
+
+    it("should change server format", async function () {
+        try {
+            await this.server.changeFormat("6v6");
+
+            assert(this.server.format === "6v6", "Server format did not set to 6v6");
+
+            await this.server.addPlayer(this.player1);
+            await this.server.changeFormat("4v4");
+
+            assert(this.server.format === "6v6", "Server format changed from 6v6");
+        } catch (error) {
+            if (error.code) {
+                if (error.code === "ERR_ASSERTION") 
+                    throw error;
+            } else {
+                assert.fail(error);
+            }
+        }
     });
 });
 
