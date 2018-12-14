@@ -27,7 +27,7 @@ module.exports = (schema) => {
         return await this.findOne({ name });
     }
 
-    schema.statics.findByIP = async function (ip, port) {
+    schema.statics.findByIp = async function (ip, port) {
         return await this.findOne({ ip, port });
     }
 
