@@ -169,8 +169,8 @@ module.exports = (schema) => {
         this.teamA = [];
         this.teamB = [];
 
-        await this.setStatus(statuses.FREE);
         await this.sendRconCommand("mx_reset");
+        await this.setStatus(statuses.FREE);
     }
 
     schema.methods.changeFormat = async function (format) {
@@ -185,7 +185,7 @@ module.exports = (schema) => {
 
         this.format = format;
 
-        await this.sendRconCommand(`mx_setformat ${this.format}`);
+        await this.sendRconCommand(`mx_set_format ${this.format}`);
 
         await this.save();
     }

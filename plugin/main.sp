@@ -1,4 +1,4 @@
-#define PLUGIN_VERSION  "1.0.0"
+#define PLUGIN_VERSION  "1.0.1"
 #define UPDATE_URL      ""
 #define TAG             "MIX"
 #define COLOR_TAG       "{matAmber}"
@@ -37,14 +37,15 @@ public OnPluginStart() {
     PlayerName = new StringMap();
     PlayerTeam = new StringMap();
 
-    RegConsoleCmd("mx_init",      Command_Init);
-    RegConsoleCmd("mx_reset",     Command_Reset);
-    RegConsoleCmd("mx_setmap",    Command_SetMap);      // TODO: Change to mx_set_map
-    RegConsoleCmd("mx_setformat", Command_SetFormat);   // TODO: Change to mx_set_format
-    RegConsoleCmd("mx_getstatus", Command_GetStatus);   // TODO: Change to mx_get_status
-    RegConsoleCmd("mx_setstatus", Command_SetStatus);   // TODO: Change to mx_set_status
-    RegConsoleCmd("mx_addplayer", Command_AddPlayer);   // TODO: Change to mx_add_player
-    RegConsoleCmd("mx_version",   Command_Version);
+    RegConsoleCmd("mx_init", Command_Init);
+    RegConsoleCmd("mx_reset", Command_Reset); 
+    RegConsoleCmd("mx_list_players", Command_ListPlayers);  
+    RegConsoleCmd("mx_add_player", Command_AddPlayer);  
+    RegConsoleCmd("mx_set_map", Command_SetMap);    
+    RegConsoleCmd("mx_set_format", Command_SetFormat); 
+    RegConsoleCmd("mx_get_status", Command_GetStatus);  
+    RegConsoleCmd("mx_set_status", Command_SetStatus);  
+    RegConsoleCmd("mx_version", Command_Version);
 
     HookEvent("player_changename", Event_NameChange, EventHookMode_Post);
 
@@ -259,6 +260,18 @@ public Action Command_GetStatus(int client, int args) {
     }
 
     return Plugin_Continue;
+}
+
+public Action Command_ListPlayers(int client, int args) {
+    for (int i = 0; i < PlayerSteam.Length; i++) {
+        char steam[32], name[32], team[4];
+
+        PlayerSteam.GetString(i, steam, sizeof(steam));
+        PlayerName.GetString(steam, name, sizeof(name));
+        PlayerTeam.GetString(steam, team, sizeof(team));
+
+        PrintToServer("%s %s %", steam, name, team)
+    }
 }
 
 public Action Command_Version(int client, int args) {
