@@ -120,10 +120,10 @@ module.exports = async (app) => {
             if (queue.players.length >= format.size * 2) {        
                 log(`Enough players have joined ${queue.name}, switching status to SETUP`);
 
+                await divideTeams(queue, format);       
                 await queue.sendRconCommand('mx_reset');
                 await queue.sendRconCommand(`mx_setstatus ${Queue.status.SETUP}`);         
                 await queue.setStatus(Queue.status.SETUP);
-                await divideTeams(queue, format);       
             }
 
             try {
@@ -136,12 +136,16 @@ module.exports = async (app) => {
                 log(`Failed to set role name for Queue ${queue.name}`, error);
             }
         } else if (queue.status === Queue.status.SETUP) {
-            const map = format.maps[Math.floor(Math.random() * format.maps.length)];           
+            const map = format.maps[Math.floor(Math.random() * format.maps.length)];     
+            
+            log(`Setting up ${queue.name} for ${queue.format} with map ${map}`);
 
             await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
             await queue.sendRconCommand(`mx_setmap ${map}`);
         } else if (queue.status === queue.status.WAITING) {
-            await queue.setDiscordRoleName(`${queue.name}: Waiting (${queue.players.length}/${format.size * 2})`);
+            const query = await queue.queryGameQueue();
+            const count = query.players.length;
+            await queue.setDiscordRoleName(`${queue.name}: Waiting (${count}/${format.size * 2})`);
         }
 
         registerCommands(queue);
