@@ -60,7 +60,11 @@ module.exports = (schema) => {
     }
 
     schema.methods.leaveQueue = async function () {
-        await this.removeDiscordRole(this.queue.role);
+        try {
+            await this.removeDiscordRole(this.queue.role);
+        } catch (error) {
+            log(error);
+        }
 
         this.status = statuses.FREE;
         this.queue = null;

@@ -271,7 +271,7 @@ module.exports = async (app) => {
             log(`Failed to remove player ${player_id} from Queue ${queue.name}`);
 
             if (error.code === "QUEUE_NOT_FREE") {
-                await args.message.reply("Cannot join the queue at the moment.");
+                await args.message.reply("Cannot leave the queue at the moment.");
             }else if (error.code === "PLAYER_NOT_IN_CURRENT_QUEUE") {                
                 await args.message.reply("You have not joined this queue.");
             } else if (error.code === "PLAYER_NOT_IN_QUEUE") {
