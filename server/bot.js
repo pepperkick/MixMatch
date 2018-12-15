@@ -4,10 +4,9 @@ const Rcon = require('rcon-client').Rcon;
 const Exception = require("./objects/exception");
 
 const log = debug("app:bot");
-const conns = {};
 
 module.exports = async (app) => {
-    const Server = app.connection.model("Server");
+    const Queue = app.connection.model("Queue");
     const Player = app.connection.model("Player");
     const Command = app.object.command;
     const Discord = app.discord;
@@ -31,12 +30,12 @@ module.exports = async (app) => {
     });
 
     Command.Register({ 
-        command: 'reset_servers',
+        command: 'reset_queues',
         role: [ app.config.discord.roles.admin ]
     }, async (args) => {
-        const servers_db = await Server.find();
-        for (let server of servers_db) {
-            await server.remove();
+        const servers_db = await Queue.find();
+        for (let Queue of servers_db) {
+            await Queue.remove();
         }
 
         checkServers();
@@ -44,32 +43,32 @@ module.exports = async (app) => {
         args.message.reply('Success');
     });
 
-    checkServers();
+    checkQueues();
     checkPlayers();
 
     Player.events.on("new", onNewPlayer);
     Player.events.on("player_left_queue", onPlayerLeftQueue);
-    Server.events.on("update", onServerUpdate);
+    Queue.events.on("update", onQueueUpdate);
     app.on("server_player_connected", onPlayerConnectedToServer);
 
-    async function checkServers() {
-        const servers = app.config.servers;
-        for (let name in servers) {
-            const server_config = servers[name];
-            const server_in_db = await Server.findOne({ name });
+    async function checkQueues() {
+        const queues = app.config.queues;
+        for (let name in queues) {
+            const queue_config = queues[name];
+            const queue_in_db = await Queue.findOne({ name });
     
-            if (server_in_db);
+            if (queue_in_db);
             else {
-                await createNewServer(name, server_config);
+                await createNewQueue(name, queue_config);
             }
         }
     
-        const servers_db = await Server.find();
-        for (let server of servers_db) {
-            await server.setStatus(Server.status.UNKNOWN);
+        const queues_db = await Queue.find();
+        for (let queue of queues_db) {
+            await queue.setStatus(Queue.status.UNKNOWN);
 
-            server.discord_channel = await Discord.getGuildChannel(app.config.discord.guild, server.channel);
-            server.discord_role = await Discord.getGuildRole(app.config.discord.guild, server.role);
+            queue.discord_channel = await Discord.getGuildChannel(app.config.discord.guild, queue.channel);
+            queue.discord_role = await Discord.getGuildRole(app.config.discord.guild, queue.role);
         }
     }
 
@@ -80,72 +79,72 @@ module.exports = async (app) => {
         }
     }
 
-    async function onServerUpdate(server) {
-        const format = app.config.formats[server.format];
+    async function onQueueUpdate(queue) {
+        const format = app.config.formats[queue.format];
         
-        if (server.status === Server.status.UNKNOWN) {
+        if (queue.status === Queue.status.UNKNOWN) {
             try {
-                server.conn = await createRconConnection(server.ip, server.port, server.rcon);
+                queue.conn = await createRconConnection(queue.ip, queue.port, queue.rcon);
 
-                log(`${server.name} RCON connected`);
+                log(`${queue.name} RCON connected`);
         
-                if (await checkPluginVersion(server)) {        
-                    const server_status = await server.sendRconCommand("mx_getstatus");
+                if (await checkPluginVersion(queue)) {        
+                    const queue_status = await queue.sendRconCommand("mx_getstatus");
 
-                    await server.sendRconCommand(`mx_init ${app.config.host} ${app.config.port} ${server.name}`);
+                    await queue.sendRconCommand(`mx_init ${app.config.host} ${app.config.port} ${queue.name}`);
 
-                    if (server_status.includes(Server.status.SETUP)) {
-                        await server.setStatus(Server.status.SETUP);
-                    } else if (server_status.includes(Server.status.WAITING)) { 
-                        await server.setStatus(Server.status.WAITING);                        
+                    if (queue_status.includes(Queue.status.SETUP)) {
+                        await queue.setStatus(Queue.status.SETUP);
+                    } else if (queue_status.includes(Queue.status.WAITING)) { 
+                        await queue.setStatus(Queue.status.WAITING);                        
                     } else {
-                        await server.setStatus(Server.status.FREE);
+                        await queue.setStatus(Queue.status.FREE);
 
-                        await server.sendRconCommand(`mx_reset`);
-                        await server.sendRconCommand(`mx_teamsize ${format.size}`);
-                        await server.sendRconCommand(`mx_setformat ${server.format}`);
-                        await server.sendRconCommand(`mx_restrict_players 1`);
+                        await queue.sendRconCommand(`mx_reset`);
+                        await queue.sendRconCommand(`mx_teamsize ${format.size}`);
+                        await queue.sendRconCommand(`mx_setformat ${queue.format}`);
+                        await queue.sendRconCommand(`mx_restrict_players 1`);
                     }
                 } else {
-                    log(`Server plugin version does not match with ${app.config.plugin.version}`);
+                    log(`Queue plugin version does not match with ${app.config.plugin.version}`);
     
-                    await server.setStatus(Server.status.OUTDATED);
+                    await queue.setStatus(Queue.status.OUTDATED);
                 }
             } catch (error) {
                 log(error);
-                log(`${server.name} RCON disconnected`);
+                log(`${queue.name} RCON disconnected`);
 
-                setTimeout(async () => await server.setStatus(Server.status.UNKNOWN), 10000);
+                setTimeout(async () => await queue.setStatus(Queue.status.UNKNOWN), 10000);
             }
-        } else if (server.status === Server.status.FREE) {
-            if (server.players.length >= format.size * 2) {        
-                log(`Enough players have joined ${server.name}, switching status to SETUP`);
+        } else if (queue.status === Queue.status.FREE) {
+            if (queue.players.length >= format.size * 2) {        
+                log(`Enough players have joined ${queue.name}, switching status to SETUP`);
 
-                await server.sendRconCommand('mx_reset');
-                await server.sendRconCommand(`mx_setstatus ${Server.status.SETUP}`);         
-                await divideTeams(server, format);       
-                await server.setStatus(Server.status.SETUP);
+                await queue.sendRconCommand('mx_reset');
+                await queue.sendRconCommand(`mx_setstatus ${Queue.status.SETUP}`);         
+                await queue.setStatus(Queue.status.SETUP);
+                await divideTeams(queue, format);       
             }
 
             try {
-                if (server.players.length === 0) {
-                    await server.setDiscordRoleName(`${server.name}: Empty`);
+                if (queue.players.length === 0) {
+                    await queue.setDiscordRoleName(`${queue.name}: Empty`);
                 } else {
-                    await server.setDiscordRoleName(`${server.name}: Queuing (${server.players.length}/${format.size * 2})`);
+                    await queue.setDiscordRoleName(`${queue.name}: Queuing (${queue.players.length}/${format.size * 2})`);
                 }
             } catch (error) {
-                log(`Failed to set role name for server ${server.name}`, error);
+                log(`Failed to set role name for Queue ${queue.name}`, error);
             }
-        } else if (server.status === Server.status.SETUP) {
+        } else if (queue.status === Queue.status.SETUP) {
             const map = format.maps[Math.floor(Math.random() * format.maps.length)];           
 
-            await server.setDiscordRoleName(`${server.name}: Setting Up`);
-            await server.sendRconCommand(`mx_setmap ${map}`);
-        } else if (server.status === Server.status.WAITING) {
-            await server.setDiscordRoleName(`${server.name}: Waiting (${server.players.length}/${format.size * 2})`);
+            await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
+            await queue.sendRconCommand(`mx_setmap ${map}`);
+        } else if (queue.status === queue.status.WAITING) {
+            await queue.setDiscordRoleName(`${queue.name}: Waiting (${queue.players.length}/${format.size * 2})`);
         }
 
-        registerCommands(server);
+        registerCommands(queue);
     }
 
     async function onPlayerLeftQueue(player) {
@@ -158,91 +157,91 @@ module.exports = async (app) => {
     }
 
     async function onPlayerConnectedToServer(data) {
-        const { server, player } = data;
-        const format = app.config.formats[server.format];
-        const query = await server.queryGameServer();
+        const { queue, player } = data;
+        const format = app.config.formats[queue.format];
+        const query = await queue.queryGameQueue();
         const count = query.players.length;
 
         await player.setStatus(Player.status.CONNECTED);        
-        await server.setDiscordRoleName(`${server.name}: Waiting (${count}/${format.size * 2})`);
+        await queue.setDiscordRoleName(`${queue.name}: Waiting (${count}/${format.size * 2})`);
     }
 
-    async function createNewServer(name, server) {
-        const server_new = new Server({
+    async function createNewQueue(name, queue) {
+        const queue_new = new Queue({
             name,
-            ip: server.ip,
-            port: server.port,
-            rcon: server.rcon,
-            channel: server.channel,
-            format: server.formats[0],
-            role: server.role
+            ip: queue.ip,
+            port: queue.port,
+            rcon: queue.rcon,
+            channel: queue.channel,
+            format: queue.formats[0],
+            role: queue.role
         });
 
         try {
-            await server_new.save();
+            await queue_new.save();
         } catch (error) {
-            log(`Failed to save server ${name} due to error`);
+            log(`Failed to save Queue ${name} due to error`);
             log(error);
         }
     }
 
-    function registerCommands(server) {
-        if (server.status === server.commands_status) return;
-        else server.commands_status = server.status;
+    function registerCommands(queue) {
+        if (queue.status === queue.commands_status) return;
+        else queue.commands_status = queue.status;
 
-        if (server.status === Server.status.FREE) {
+        if (queue.status === Queue.status.FREE) {
             Command.Register({ 
                 command: 'join',
-                channel: server.channel,
+                channel: queue.channel,
                 role: [ app.config.discord.roles.player ]
             }, async (args) => {
-                await addPlayerServer(args, server, args.message.author.id)
+                await addPlayerQueue(args, queue, args.message.author.id)
             });
 
             Command.Register({ 
                 command: 'leave',
-                channel: server.channel,
+                channel: queue.channel,
                 role: [ app.config.discord.roles.player ]
             }, async (args) => {
-                await removePlayerServer(args, server, args.message.author.id)
+                await removePlayerQueue(args, queue, args.message.author.id)
             });
 
             Command.Register({ 
                 command: 'format',
-                channel: server.channel,
+                channel: queue.channel,
                 role: [ app.config.discord.roles.admin ]
             }, async (args) => {
-                await changeServerFormat(args, server)
+                await changeQueueFormat(args, queue)
             });
         }
     
         Command.Register({ 
             command: 'reset',
-            channel: server.channel,
+            channel: queue.channel,
             role: [ app.config.discord.roles.admin ]
         }, async (args) => {
-            await resetServer(args, server)
+            await resetQueue(args, queue)
         });
 
         Command.Register({ 
             command: 'status',
-            channel: server.channel,
+            channel: queue.channel,
             role: [ app.config.discord.roles.player ]
         }, async (args) => {
-            await getServerStatus(args, server)
+            await getQueueStatus(args, queue)
         });
     }
 
-    async function addPlayerServer(args, server, player_id) {
+    async function addPlayerQueue(args, queue, player_id) {
         try {
             const player = await Player.findByDiscord(player_id);
             
-            await server.addPlayer(player);            
+            await queue.addPlayer(player);            
             await args.message.reply('You have successfully joined the queue');
         } catch (error) {
-            log(`Failed to add player ${player_id} to server ${server.name}`);
+            log(`Failed to add player ${player_id} to Queue ${queue.name}`);
 
-            if (error.code === "SERVER_NOT_FREE") {
+            if (error.code === "Queue_NOT_FREE") {
                 await args.message.reply("Cannot join the queue at the moment.");
             } else if (error.code === "PLAYER_ALREADY_IN_CURRENT_QUEUE") {                
                 await args.message.reply("You have already joined this queue.");
@@ -258,16 +257,16 @@ module.exports = async (app) => {
         }
     }
 
-    async function removePlayerServer(args, server, player_id) {
+    async function removePlayerQueue(args, queue, player_id) {
         try {
             const player = await Player.findByDiscord(player_id);
 
-            await server.removePlayer(player);            
+            await queue.removePlayer(player);            
             await args.message.reply('You have successfully left the queue');
         } catch (error) {
-            log(`Failed to remove player ${player_id} from server ${server.name}`);
+            log(`Failed to remove player ${player_id} from Queue ${queue.name}`);
 
-            if (error.code === "SERVER_NOT_FREE") {
+            if (error.code === "QUEUE_NOT_FREE") {
                 await args.message.reply("Cannot join the queue at the moment.");
             }else if (error.code === "PLAYER_NOT_IN_CURRENT_QUEUE") {                
                 await args.message.reply("You have not joined this queue.");
@@ -283,8 +282,8 @@ module.exports = async (app) => {
         }
     }
 
-    async function changeServerFormat(args, server) {
-        const server_config = app.config.servers[server.name];
+    async function changeQueueFormat(args, queue) {
+        const queue_config = app.config.queues[queue.name];
         const format = args.parameters[1];
 
         if (!format) {
@@ -292,11 +291,11 @@ module.exports = async (app) => {
             let format_show;
             let count = 1;
 
-            for (let i in server_config.formats) {
-                if (!app.config.formats[server_config.formats[i]].hide) {
-                    format_list += `${count}: ${server_config.formats[i]}\n`;
+            for (let i in queue_config.formats) {
+                if (!app.config.formats[queue_config.formats[i]].hide) {
+                    format_list += `${count}: ${queue_config.formats[i]}\n`;
 
-                    if (!format_show) format_show = server_config.formats[i];
+                    if (!format_show) format_show = queue_config.formats[i];
 
                     count++;
                 }
@@ -306,20 +305,20 @@ module.exports = async (app) => {
         }
 
         try {
-            if (!server_config.formats.includes(format)) {
-                throw new Exception("FORMAT_NOT_SUPPORTED", `The format ${format} is not supported by queue ${server.name}`);
+            if (!queue_config.formats.includes(format)) {
+                throw new Exception("FORMAT_NOT_SUPPORTED", `The format ${format} is not supported by queue ${queue.name}`);
             }
 
-            await server.changeFormat(format);
+            await queue.changeFormat(format);
             await args.message.reply(`Successfully changed the queue format to ${format}`);
         } catch (error) {
-            log(`Failed to change format of server ${server.name} to ${format}`);
+            log(`Failed to change format of Queue ${queue.name} to ${format}`);
 
             if (error.code === "FORMAT_NOT_SUPPORTED") {
                 await args.message.reply(`That format is currently not supported by the queue.`);
             } else if (error.code === "FORMAT_SAME") {
                 await args.message.reply(`Queue is already in that format`);                
-            } else if (error.code === "SERVER_NOT_FREE") {
+            } else if (error.code === "QUEUE_STATUS_NOT_FREE") {
                 await args.message.reply("Cannot change the format at the moment.");                
             } else if (error.code === "QUEUE_NOT_FREE") {
                 await args.message.reply("Cannot change the format as players are in queue.");                
@@ -331,31 +330,31 @@ module.exports = async (app) => {
         }
     }
 
-    async function getServerStatus(args, server) {
+    async function getQueueStatus(args, queue) {
         try {
             const fields = [];
-            const format = server.format;
+            const format = queue.format;
             
             const embed = {
                 color: 0x00BCD4,
-                title: `Server ${server.name}`,
+                title: `Queue ${queue.name}`,
                 fields,
                 timestamp: new Date()
             }
 
-            if (server.status === Server.status.FREE) {
+            if (queue.status === Queue.status.FREE) {
                 fields.push({
                     name: 'Status',
                     value: 'Waiting for enough players to join'
                 });
-            } else if (server.status === Server.status.SETUP) {
+            } else if (queue.status === Queue.status.SETUP) {
                 fields.push({
                     name: 'Status',
-                    value: 'Setting up the server'
+                    value: 'Setting up the Queue'
                 });
             }
 
-            if (server.status === Server.status.FREE) {
+            if (queue.status === Queue.status.FREE) {
                 fields.push({
                     name: 'Format',
                     value: format,
@@ -364,18 +363,18 @@ module.exports = async (app) => {
 
                 fields.push({
                     name: 'Number of Players',
-                    value: `${server.players.length} / ${app.config.formats[format].size * 2}`,
+                    value: `${queue.players.length} / ${app.config.formats[format].size * 2}`,
                     inline: true
                 });
-            } else if (server.status === Server.status.SETUP) {
+            } else if (queue.status === Queue.status.SETUP) {
                 fields.push({
                     name: 'Format',
                     value: format
                 });        
             }
 
-            if (server.status === Server.status.FREE) {
-                if (server.players.length === 0) {
+            if (queue.status === Queue.status.FREE) {
+                if (queue.players.length === 0) {
                     fields.push({
                         name: 'Players',
                         value: 'No players have currently joined'
@@ -383,7 +382,7 @@ module.exports = async (app) => {
                 } else {
                     let players = '';
 
-                    for (const player_id of server.players) {
+                    for (const player_id of queue.players) {
                         const player = await Player.findById(player_id);
                         const user = await Discord.getUser(player.discord);
 
@@ -395,18 +394,18 @@ module.exports = async (app) => {
                         value: players
                     });
                 }
-            } else if (server.status === Server.status.SETUP) {
+            } else if (queue.status === Queue.status.SETUP) {
                 let players_teamA = '';
                 let players_teamB = '';
 
-                for (const player_id of server.teamA) {
+                for (const player_id of queue.teamA) {
                     const player = await Player.findById(player_id);
                     const user = await Discord.getUser(player.discord);
 
                     players_teamA += `${user.username}\n`;
                 }
 
-                for (const player_id of server.teamB) {
+                for (const player_id of queue.teamB) {
                     const player = await Player.findById(player_id);
                     const user = await Discord.getUser(player.discord);
 
@@ -426,49 +425,51 @@ module.exports = async (app) => {
                 });
             }
 
-            await Discord.sendToChannel(server.channel, { embed });
+            await Discord.sendToChannel(queue.channel, { embed });
         } catch (error) {
-            log(`Failed to send status message for server ${server.name}`);
+            log(`Failed to send status message for Queue ${queue.name}`);
             log(error);
         }
     }
 
-    async function resetServer(args, server) {
+    async function resetQueue(args, queue) {
         try {
-            await server.removeAllPlayers();
+            await queue.removeAllPlayers();
 
             await args.message.reply(`Successfully cleared the queue.`);
         } catch (error) {
-            log(`Failed to reset the server ${server.name}`);
+            log(`Failed to reset the Queue ${queue.name}`);
             log(error);
         }
     }
 
-    async function divideTeams(server, format) {      
+    async function divideTeams(queue, format) {      
         for (let i = 0; i < format.size * 2; i++) {
-            const player = await Player.findById(server.players.pop());
+            const player = await Player.findById(queue.players.pop());
             const member = await Discord.getMember(app.config.discord.guild, player.discord);
 
             if (i % 2 === 0) {
                 await player.addDiscordRole(app.config.teams.A.role);
-                server.teamA.push(player.id);
+                queue.teamA.push(player.id);
             } else {
                 await player.addDiscordRole(app.config.teams.B.role);
-                server.teamB.push(player.id);
+                queue.teamB.push(player.id);
             }
             
-            await server.sendRconCommand(`mx_addplayer ${player.steam} ${i%2} ${member.user.username}`);
+            await queue.sendRconCommand(`mx_addplayer ${player.steam} ${i%2} ${member.user.username}`);
         }
     }
 
     async function createRconConnection(host, port, password) {
+        log("Creating rcon connection", host, port);
+
         const rcon = new Rcon({packetResponseTimeout: 1000});
         await rcon.connect({ host, port, password });
         return rcon;
     }
 
-    async function checkPluginVersion(server) {
-        let version = await server.sendRconCommand('mx_version');
+    async function checkPluginVersion(queue) {
+        let version = await queue.sendRconCommand('mx_version');
     
         return version.includes(app.config.plugin.version);
     }

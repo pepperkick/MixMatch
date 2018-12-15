@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 module.exports = {
-    name: "Server",
+    name: "Queue",
     plugins: {
         timestamps: true,
         events: true,

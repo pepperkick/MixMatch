@@ -32,7 +32,7 @@
             "role": ""
         }
     },
-    "servers": {
+    "queues": {
         "Name": {
             "ip": "",
             "port": "",

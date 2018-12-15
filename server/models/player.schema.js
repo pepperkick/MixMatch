@@ -9,9 +9,9 @@ module.exports = {
     schema: {
         steam: String,
         discord: String,
-        server: {
+        queue: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Server',
+            ref: 'Queue',
             default: null
         }
     },

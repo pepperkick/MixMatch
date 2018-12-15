@@ -2,7 +2,7 @@ const Gamedig = require('gamedig');
 
 const Exception = require("../objects/exception");
 
-const log = require('debug')('app:models:server');
+const log = require('debug')('app:models:queue');
 module.exports = (schema) => {
     const statuses = Object.freeze({
         UNKNOWN: 'unknown',
@@ -41,7 +41,7 @@ module.exports = (schema) => {
     });
 
     schema.virtual('conn').get(function() {
-        if (!conns[this.id]) throw new Error(`RCON connection for server '${this.name}' does not exist.`)
+        if (!conns[this.id]) throw new Error(`RCON connection for Queue '${this.name}' does not exist.`)
 
         return conns[this.id];
     });
@@ -51,7 +51,7 @@ module.exports = (schema) => {
     });
 
     schema.virtual('discord_channel').get(function() {
-        if (!channels[this.id]) throw new Error(`Channel for server '${this.name}' does not exist.`)
+        if (!channels[this.id]) throw new Error(`Channel for Queue '${this.name}' does not exist.`)
 
         return channels[this.id];
     });
@@ -61,7 +61,7 @@ module.exports = (schema) => {
     });
 
     schema.virtual('discord_role').get(function() {
-        if (!roles[this.id]) throw new Error(`Role for server '${this.name}' does not exist.`)
+        if (!roles[this.id]) throw new Error(`Role for Queue '${this.name}' does not exist.`)
 
         return roles[this.id];
     });
@@ -98,23 +98,23 @@ module.exports = (schema) => {
 
     schema.methods.addPlayer = async function (player) {
         player = await this.model('Player').checkOrGet(player);
-        player = await player.populate("server").execPopulate();
+        player = await player.populate("queue").execPopulate();
 
         if (!player)
             throw new Exception("PLAYER_NOT_FOUND", `Player ${player.id} not found!`);
 
-        if (player.server && player.server.id == this.id) 
+        if (player.queue && player.queue.id == this.id) 
             throw new Exception("PLAYER_ALREADY_IN_CURRENT_QUEUE", `Player ${player.id} is already in current queue`);
 
-        if (player.server !== null) 
-            throw new Exception("PLAYER_ALREADY_IN_QUEUE", `Player ${player.id} is already in queue ${player.server.id}`);
+        if (player.queue !== null) 
+            throw new Exception("PLAYER_ALREADY_IN_QUEUE", `Player ${player.id} is already in queue ${player.queue.id}`);
 
         if (!this.isFree())
-            throw new Exception("SERVER_NOT_FREE", `Server status is currently ${this.status} which needs to be ${statuses.FREE} for player to join.`);
+            throw new Exception("QUEUE_NOT_FREE", `Queue status is currently ${this.status} which needs to be ${statuses.FREE} for player to join.`);
 
         this.players.push(player.id);
 
-        await player.joinServer(this);
+        await player.joinQueue(this);
         await this.save();
 
         log(`${this.name}: Added Player ${player.id} (${player.discord})`);
@@ -124,28 +124,28 @@ module.exports = (schema) => {
 
     schema.methods.removePlayer = async function (player, force = false) {
         player = await this.model('Player').checkOrGet(player);
-        player = await player.populate("server").execPopulate();
+        player = await player.populate("queue").execPopulate();
 
         if (!force) {
-            if (player.server === null) 
+            if (player.queue === null) 
                 throw new Exception("PLAYER_NOT_IN_QUEUE", `Player ${player.id} is not in any queue`);
 
-            if (player.server && player.server.id != this.id) 
+            if (player.queue && player.queue.id != this.id) 
                 throw new Exception("PLAYER_NOT_IN_CURRENT_QUEUE", `Player ${player.id} is not in current queue`);
 
             if (!this.isFree())
-                throw new Exception("SERVER_NOT_FREE", `Server status is currently ${this.status} which needs to be ${statuses.FREE} for player to join.`);
+                throw new Exception("QUEUE_NOT_FREE", `Queue status is currently ${this.status} which needs to be ${statuses.FREE} for player to join.`);
+        }
 
-            for (const i in this.players) {
-                if (this.players[i].toString() === player.id.toString()) {
-                    this.players.splice(i, 1);
+        for (const i in this.players) {
+            if (this.players[i].toString() === player.id.toString()) {
+                this.players.splice(i, 1);
 
-                    break;
-                }
+                break;
             }
         }
 
-        await player.leaveServer();
+        await player.leaveQueue();
         await this.save();
 
         log(`${this.name}: Removed Player ${player.id} (${player.discord})`);
@@ -175,13 +175,13 @@ module.exports = (schema) => {
 
     schema.methods.changeFormat = async function (format) {
         if (this.format === format)
-            throw new Exception("FORMAT_SAME", `Server format is already ${format}`);
+            throw new Exception("FORMAT_SAME", `Queue format is already ${format}`);
 
         if (!this.isFree())
-            throw new Exception("SERVER_NOT_FREE", `Server status is currently ${this.status} which needs to be ${statuses.FREE} for player to join.`);
+            throw new Exception("QUEUE_STATUS_NOT_FREE", `Queue status is currently ${this.status} which needs to be ${statuses.FREE} for player to join.`);
 
         if (this.players.length !== 0)
-            throw new Exception("QUEUE_NOT_FREE", `Server's queue currently has players, the server format cannot change while players still in queue. `);
+            throw new Exception("QUEUE_NOT_FREE", `Queue's queue currently has players, the Queue format cannot change while players still in queue. `);
 
         this.format = format;
 
@@ -208,7 +208,7 @@ module.exports = (schema) => {
         return this.conn.send(command);
     }
     
-    schema.methods.queryGameServer = async function () {
+    schema.methods.queryGameQueue = async function () {
         return Gamedig.query({
             host: this.ip,
             port: this.port,

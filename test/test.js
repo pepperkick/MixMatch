@@ -54,29 +54,29 @@ describe("Configuration", function () {
         }
     });
 
-    it("should have servers config", async function () {
-        assert(config.servers, "Server config does not exist");
-        assert(config.servers instanceof Object, "Server config must be an object");
-        assert(Object.keys(config.servers).length > 0, "No server configs are present");
+    it("should have Queues config", async function () {
+        assert(config.queues, "Queue config does not exist");
+        assert(config.queues instanceof Object, "Queue config must be an object");
+        assert(Object.keys(config.queues).length > 0, "No Queue configs are present");
 
-        for (const name in config.servers) {
-            const server = config.servers[name];
+        for (const name in config.queues) {
+            const queue = config.queues[name];
     
-            assert(server.channel, `Channel id for server ${name} is not defined`);
-            assert(server.formats, `Game formats for server ${name} is not defined`);
-            assert(server.ip, `IP for server ${name} is not defined`);
-            assert(server.port, `Port for server ${name} is not defined`);
-            assert(server.rcon, `RCON password for server ${name} is not defined`);
-            assert(server.role, `Discord role for server ${name} is not defined`);
+            assert(queue.channel, `Channel id for Queue ${name} is not defined`);
+            assert(queue.formats, `Game formats for Queue ${name} is not defined`);
+            assert(queue.ip, `IP for Queue ${name} is not defined`);
+            assert(queue.port, `Port for Queue ${name} is not defined`);
+            assert(queue.rcon, `RCON password for Queue ${name} is not defined`);
+            assert(queue.role, `Discord role for Queue ${name} is not defined`);
 
-            assert(typeof server.ip === 'string', `IP for server ${name} must be a String`);
-            assert(typeof server.ip === 'string' || isNum(server.port), `Port for server ${name} must be a String or Number`);
-            assert(typeof server.ip === 'string', `RCON password for server ${name} must be a String`);
+            assert(typeof queue.ip === 'string', `IP for Queue ${name} must be a String`);
+            assert(typeof queue.ip === 'string' || isNum(queue.port), `Port for Queue ${name} must be a String or Number`);
+            assert(typeof queue.ip === 'string', `RCON password for Queue ${name} must be a String`);
 
-            assert(isValidIp(server.ip), `Server IP ${server.ip} is not valid`);
+            assert(isValidIp(queue.ip), `Queue IP ${queue.ip} is not valid`);
 
-            for (const i in server.formats) {
-                assert(config.formats[server.formats[i]], `Format ${server.formats[i]} does not exist`);
+            for (const i in queue.formats) {
+                assert(config.formats[queue.formats[i]], `Format ${queue.formats[i]} does not exist`);
             }
         }
     });
@@ -135,13 +135,13 @@ describe("Discord", function () {
         if (guild) this.guild = guild;
     });
     
-    it('should have channels for servers', async function () {
-        for (const name in config.servers) {            
-            const server = config.servers[name];
-            const server_channel = server.channel;
-            const channel = await this.guild.channels.get(server_channel);
+    it('should have channels for queues', async function () {
+        for (const name in config.Queues) {            
+            const Queue = config.Queues[name];
+            const Queue_channel = Queue.channel;
+            const channel = await this.guild.channels.get(Queue_channel);
     
-            assert(channel, `Server channel for ${server.name} not present in guild ${config.discord.guild}`);
+            assert(channel, `Queue channel for ${Queue.name} not present in guild ${config.discord.guild}`);
         }
     });
     
@@ -155,13 +155,13 @@ describe("Discord", function () {
         // assert(role_captain, "Captain role does not exist in guild");
     });
 
-    it('should have roles for servers', async function () {
-        for (const name in config.servers) {            
-            const server = config.servers[name];
-            const server_role = server.role;
-            const role = await this.guild.roles.get(server_role);
+    it('should have roles for queues', async function () {
+        for (const name in config.Queues) {        
+            const queue = config.Queues[name];
+            const queue_role = queue.role;
+            const role = await this.guild.roles.get(queue_role);
     
-            assert(role, `Server role for ${server.name} not present in guild ${config.discord.guild}`);
+            assert(role.id === config.queue[name].role, `Queue role for ${queue.name} not present in guild ${config.discord.guild}`);
         }
     });
 
@@ -184,7 +184,7 @@ describe("Database", async function () {
     after(async function () {
         if (this.player1) await this.player1.delete();
         if (this.player2) await this.player2.delete();
-        if (this.server) await this.server.delete();
+        if (this.queue) await this.queue.delete();
         await this.connection.disconnect();
     });
 
@@ -197,10 +197,10 @@ describe("Database", async function () {
             mongen.init(connection, __dirname + '/../server/models');
             
             this.Player = connection.model("Player");
-            this.Server = connection.model("Server");
+            this.Queue = connection.model("Queue");
     
             assert(this.Player, "Player model did not register");
-            assert(this.Server, "Server model did not register");
+            assert(this.Queue, "Queue model did not register");
 
             this.connection = connection;
         } catch (error) {
@@ -246,8 +246,8 @@ describe("Database", async function () {
         assert(player_obj2, "'checkOrGet' failed to get the object from string id");
     });
 
-    it("should create servers", async function () {
-        this.server = new this.Server({
+    it("should create queues", async function () {
+        this.queue = new this.Queue({
             name: "TEST",
             ip: "1.1.1.1",
             port: 80,
@@ -257,45 +257,45 @@ describe("Database", async function () {
         });
 
         try {
-            await this.server.save();
+            await this.queue.save();
 
-            assert(this.server.status === this.Server.status.UNKNOWN, "Server status value did not set to UNKNOWN");
-            assert(!this.server.isFree(), "'isFree' function did not return false");
+            assert(this.queue.status === this.Queue.status.UNKNOWN, "Queue status value did not set to UNKNOWN");
+            assert(!this.queue.isFree(), "'isFree' function did not return false");
             
-            await this.server.setStatus(this.Server.status.FREE);
+            await this.queue.setStatus(this.Queue.status.FREE);
 
-            assert(this.server.status === this.Server.status.FREE, "Server status value did not set to FREE");
-            assert(this.server.isFree(), "'isFree' function did not return true");
+            assert(this.queue.status === this.Queue.status.FREE, "Queue status value did not set to FREE");
+            assert(this.queue.isFree(), "'isFree' function did not return true");
         } catch (error) {
             assert.fail(error);
         }
     });
 
-    it("should find servers", async function () {
-        const server_obj1 = await this.Server.findByName("TEST");
-        const server_obj2 = await this.Server.findByIp("1.1.1.1", 80);
+    it("should find queues", async function () {
+        const queue_obj1 = await this.Queue.findByName("TEST");
+        const queue_obj2 = await this.Queue.findByIp("1.1.1.1", 80);
 
-        assert(server_obj1, "Failed to get server from 'findByName' function");
-        assert(server_obj2, "Failed to get server from 'findByIp' function");
+        assert(queue_obj1, "Failed to get Queue from 'findByName' function");
+        assert(queue_obj2, "Failed to get Queue from 'findByIp' function");
     });
 
-    // it("should put player in server", async function () {
+    // it("should put player in Queue", async function () {
     //     try {
-    //         await this.server.addPlayer(this.player1);
+    //         await this.Queue.addPlayer(this.player1);
 
-    //         assert(this.server.players.length === 1, "Players array length did not set to 1");
+    //         assert(this.Queue.players.length === 1, "Players array length did not set to 1");
     //         assert(this.player1.status === this.Player.status.JOINED, "Player's status was not set to JOINED");
-    //         assert(this.player1.server == this.server.id, "Player's server was not set to server id");
+    //         assert(this.player1.Queue == this.Queue.id, "Player's Queue was not set to Queue id");
 
-    //         await this.server.addPlayer(this.player1);
+    //         await this.Queue.addPlayer(this.player1);
 
-    //         assert(this.server.players.length === 1, "Players array length changed from 1");
+    //         assert(this.Queue.players.length === 1, "Players array length changed from 1");
 
-    //         await this.server.addPlayer(this.player2);
+    //         await this.Queue.addPlayer(this.player2);
 
-    //         assert(this.server.players.length === 2, "Players array length did not set to 2");
+    //         assert(this.Queue.players.length === 2, "Players array length did not set to 2");
     //         assert(this.player2.status === this.Player.status.JOINED, "Player's status was not set to JOINED");
-    //         assert(this.player2.server == this.server.id, "Player's server was not set to server id");
+    //         assert(this.player2.Queue == this.Queue.id, "Player's Queue was not set to Queue id");
     //     } catch (error) {
     //         if (error.code) {
     //             if (error.code === "ERR_ASSERTION") 
@@ -306,23 +306,23 @@ describe("Database", async function () {
     //     }
     // });
     
-    // it("should remove player from server", async function () {
+    // it("should remove player from Queue", async function () {
     //     try {
-    //         await this.server.removePlayer(this.player2);
+    //         await this.Queue.removePlayer(this.player2);
 
-    //         assert(this.server.players.length === 1, "Players array length did not set to 1");
+    //         assert(this.Queue.players.length === 1, "Players array length did not set to 1");
     //         assert(this.player2.status === this.Player.status.FREE, "Player's status was not set to FREE");
-    //         assert(this.player2.server == null, "Player's server was not set to null");
+    //         assert(this.player2.Queue == null, "Player's Queue was not set to null");
 
-    //         await this.server.removePlayer(this.player2);
+    //         await this.Queue.removePlayer(this.player2);
             
-    //         assert(this.server.players.length === 1, "Players array length changed from 1");
+    //         assert(this.Queue.players.length === 1, "Players array length changed from 1");
 
-    //         await this.server.removePlayer(this.player1);
+    //         await this.Queue.removePlayer(this.player1);
 
-    //         assert(this.server.players.length === 0, "Players array length did not set to 0");
+    //         assert(this.Queue.players.length === 0, "Players array length did not set to 0");
     //         assert(this.player1.status === this.Player.status.FREE, "Player's status was not set to FREE");
-    //         assert(this.player1.server == null, "Player's server was not set to null");
+    //         assert(this.player1.Queue == null, "Player's Queue was not set to null");
     //     } catch (error) {
     //         if (error.code) {
     //             if (error.code === "ERR_ASSERTION") 
@@ -333,16 +333,16 @@ describe("Database", async function () {
     //     }
     // });
     
-    // it("should reset server", async function () {
+    // it("should reset Queue", async function () {
     //     try {
-    //         await this.server.addPlayer(this.player1);
-    //         await this.server.addPlayer(this.player2);
+    //         await this.Queue.addPlayer(this.player1);
+    //         await this.Queue.addPlayer(this.player2);
             
-    //         assert(this.server.players.length === 2, "Players array length did not set to 2");
+    //         assert(this.Queue.players.length === 2, "Players array length did not set to 2");
 
-    //         await this.server.removeAllPlayers();
+    //         await this.Queue.removeAllPlayers();
 
-    //         assert(this.server.players.length === 0, "Players array length did not set to 0");
+    //         assert(this.Queue.players.length === 0, "Players array length did not set to 0");
     //     } catch (error) {
     //         if (error.code) {
     //             if (error.code === "ERR_ASSERTION") 
@@ -353,18 +353,18 @@ describe("Database", async function () {
     //     }
     // });
 
-    // it("should change server format", async function () {
+    // it("should change Queue format", async function () {
     //     try {
-    //         await this.server.changeFormat("6v6");
+    //         await this.Queue.changeFormat("6v6");
 
-    //         assert(this.server.format === "6v6", "Server format did not set to 6v6");
+    //         assert(this.Queue.format === "6v6", "Queue format did not set to 6v6");
 
-    //         await this.server.addPlayer(this.player1);
-    //         await this.server.changeFormat("4v4");
+    //         await this.Queue.addPlayer(this.player1);
+    //         await this.Queue.changeFormat("4v4");
 
-    //         assert(this.server.format === "6v6", "Server format changed from 6v6");
+    //         assert(this.Queue.format === "6v6", "Queue format changed from 6v6");
 
-    //         await this.server.removeAllPlayers();
+    //         await this.Queue.removeAllPlayers();
     //     } catch (error) {
     //         if (error.code) {
     //             if (error.code === "ERR_ASSERTION") 
@@ -375,18 +375,18 @@ describe("Database", async function () {
     //     }
     // });
 
-    // it("should change server status to setup", async function () {
+    // it("should change Queue status to setup", async function () {
     //     try {
-    //         await this.server.addPlayer(this.player1);
-    //         await this.server.addPlayer(this.player2);
+    //         await this.Queue.addPlayer(this.player1);
+    //         await this.Queue.addPlayer(this.player2);
 
-    //         if (server.players.length >= 1 * 2) {
-    //             server.status = Server.status.SETUP;
+    //         if (Queue.players.length >= 1 * 2) {
+    //             Queue.status = Queue.status.SETUP;
 
-    //             await server.save();
+    //             await Queue.save();
     //         }
 
-    //         assert(this.server.status === this.Server.status.SETUP, "Player's status was not set to SETUP");
+    //         assert(this.Queue.status === this.Queue.status.SETUP, "Player's status was not set to SETUP");
     //     } catch (error) {
     //         if (error.code) {
     //             if (error.code === "ERR_ASSERTION") 
@@ -409,15 +409,15 @@ describe("RCON", async function () {
         delete this.conns;
     });
 
-    it("should connect to servers", async function () {
+    it("should connect to queues", async function () {
         this.timeout(5000);
 
-        for (const name in config.servers) {
+        for (const name in config.queues) {
             try {
-                const server = config.servers[name];
+                const queue = config.queues[name];
                 const rcon = new Rcon({packetResponseTimeout: 1000});
                 
-                await rcon.connect({ host: server.ip, port: server.port, password: server.rcon });
+                await rcon.connect({ host: queue.ip, port: queue.port, password: queue.rcon });
 
                 this.conns[name] = rcon;
             } catch (error) {
@@ -426,36 +426,36 @@ describe("RCON", async function () {
         }
     });
 
-    it("should get response from server plugin", async function () {
-        for (const name in config.servers) {
+    it("should get response from Queue plugin", async function () {
+        for (const name in config.Queues) {
             try {            
                 const version = await this.conns[name].send("mx_version");
 
-                assert(version, "Could not get response from plugin in server ${name}");
-                assert(version.includes(config.plugin.version), `Plugin in server ${name} is outdated`);
+                assert(version, "Could not get response from plugin in Queue ${name}");
+                assert(version.includes(config.plugin.version), `Plugin in Queue ${name} is outdated`);
             } catch (error) {
                 assert.fail(error);
             }
         }
     });
 
-    it("should have required maps in server", async function () {
+    it("should have required maps in Queue", async function () {
         this.timeout(30000);
 
-        for (const name in config.servers) {
+        for (const name in config.Queues) {
             try {            
-                const formats = config.servers[name].formats;
+                const formats = config.Queues[name].formats;
 
                 for (const i in formats) {
-                    const format = config.servers[name].formats[i];
-                    const format_cfg = config.formats[config.servers[name].formats[i]];
+                    const format = config.Queues[name].formats[i];
+                    const format_cfg = config.formats[config.Queues[name].formats[i]];
                     const maps = format_cfg.maps;
 
                     for (const j in maps) {
                         const map = maps[j];
                         const result = await this.conns[name].send(`maps ${map}`);
 
-                        assert(result.includes(map), `Could not find map '${map}' in server ${name} for format ${config.servers[name].formats[i]}`);
+                        assert(result.includes(map), `Could not find map '${map}' in Queue ${name} for format ${config.Queues[name].formats[i]}`);
                     }
                 }
             } catch (error) {
@@ -480,10 +480,10 @@ describe('Application', function () {
         try {
             this.app = await require("../server/app").init();
 
-            const Server = await this.app.connection.model("Server");
+            const Queue = await this.app.connection.model("Queue");
             const Player = await this.app.connection.model("Player");
             
-            this.server = new Server({
+            this.Queue = new Queue({
                 name: "test",
                 ip: "1.1.1.1",
                 port: 20,
@@ -493,8 +493,8 @@ describe('Application', function () {
                 format: "Test"
             });
 
-            await this.server.save();
-            await this.server.delete();
+            await this.Queue.save();
+            await this.Queue.delete();
             
             this.player = new Player({
                 discord: "1234",
@@ -518,15 +518,15 @@ describe('API', function () {
     });
 
     after(async function () {
-        if (this.server) await this.server.delete();
+        if (this.Queue) await this.Queue.delete();
         process.exit(0);        
     });
 
-    it("should respond ok for server status call", async function () {
+    it("should respond ok for Queue status call", async function () {
         try {
-            const Server = await this.app.connection.model("Server");
+            const Queue = await this.app.connection.model("Queue");
             
-            this.server = new Server({
+            this.Queue = new Queue({
                 name: "test",
                 ip: "1.1.1.1",
                 port: 20,
@@ -536,9 +536,9 @@ describe('API', function () {
                 format: "Test"
             });
 
-            await this.server.save();
+            await this.Queue.save();
 
-            const response = await request(`http://${config.host}:${config.port}/plugin/status_change?name=${this.server.name}&status=free`);
+            const response = await request(`http://${config.host}:${config.port}/plugin/status_change?name=${this.Queue.name}&status=free`);
 
             assert(response.statusCode === 200, `Set status API call failed with status code ${response.statusCode}`);
         } catch (error) {

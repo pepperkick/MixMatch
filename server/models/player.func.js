@@ -59,22 +59,22 @@ module.exports = (schema) => {
         await this.save();
     }
 
-    schema.methods.leaveServer = async function () {
-        await this.removeDiscordRole(this.server.role);
+    schema.methods.leaveQueue = async function () {
+        await this.removeDiscordRole(this.queue.role);
 
         this.status = statuses.FREE;
-        this.server = null;
+        this.queue = null;
 
         await this.save();
 
         this.model('Player').events.emit('player_left_queue', this);
     }
 
-    schema.methods.joinServer = async function (server) {
+    schema.methods.joinQueue = async function (queue) {
         this.status = statuses.JOINED;
-        this.server = server.id;
+        this.queue = queue.id;
 
-        await this.addDiscordRole(server.role);
+        await this.addDiscordRole(queue.role);
         await this.save();
 
         this.model('Player').events.emit('player_joined_queue', this);
