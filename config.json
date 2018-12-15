@@ -22,18 +22,30 @@
             "player": ""
         }
     },
+    "teams": {
+        "A": {
+            "name": "Team A",
+            "role": ""
+        },
+        "B": {
+            "name": "Team B",
+            "role": ""
+        }
+    },
     "servers": {
         "Name": {
             "ip": "",
             "port": "",
             "rcon": "",
             "channel": "",
-            "formats": []
+            "formats": [],
+            "role": ""
         }
     },
     "formats": {
         "Type": {
             "size": 0,
+            "maps": [],
             "hide": false
         }
     },

@@ -27,14 +27,15 @@ describe("Configuration", function () {
     });
 
     it("should have connection config", async function () {
-        assert(config.connection, "Connection config not defined");
+        assert(config.connection, "Connection config is not defined");
     });
 
     it("should have discord config", async function () {
-        assert(config.discord.token, "Discord token not defined");
-        assert(config.discord.guild, "Discord guild not defined");
-        assert(config.discord.client_id, "Discord app client id not defined");
-        assert(config.discord.client_secret, "Discord app client secret not defined");
+        assert(config.discord, "Discord config is not defined");
+        assert(config.discord.token, "Discord token is not defined");
+        assert(config.discord.guild, "Discord guild is not defined");
+        assert(config.discord.client_id, "Discord app client id is not defined");
+        assert(config.discord.client_secret, "Discord app client secret is not defined");
 
         assert(config.discord.roles.admin, "Admin role id is not defined");
         assert(config.discord.roles.player, "Player role id is not defined");
@@ -61,11 +62,12 @@ describe("Configuration", function () {
         for (const name in config.servers) {
             const server = config.servers[name];
     
-            assert(server.channel, `Channel id for server ${name} not defined`);
-            assert(server.formats, `Game formats for server ${name} not defined`);
-            assert(server.ip, `IP for server ${name} not defined`);
-            assert(server.port, `Port for server ${name} not defined`);
-            assert(server.rcon, `RCON password for server ${name} not defined`);
+            assert(server.channel, `Channel id for server ${name} is not defined`);
+            assert(server.formats, `Game formats for server ${name} is not defined`);
+            assert(server.ip, `IP for server ${name} is not defined`);
+            assert(server.port, `Port for server ${name} is not defined`);
+            assert(server.rcon, `RCON password for server ${name} is not defined`);
+            assert(server.role, `Discord role for server ${name} is not defined`);
 
             assert(typeof server.ip === 'string', `IP for server ${name} must be a String`);
             assert(typeof server.ip === 'string' || isNum(server.port), `Port for server ${name} must be a String or Number`);
@@ -77,6 +79,16 @@ describe("Configuration", function () {
                 assert(config.formats[server.formats[i]], `Format ${server.formats[i]} does not exist`);
             }
         }
+    });
+    
+    it("should have teams config", async function () {
+        assert(config.teams, "Teams config is not defined");
+        assert(config.teams.A, "Team A config is not defined");
+        assert(config.teams.A.name, "Team A name is not defined");
+        assert(config.teams.A.role, "Team A role is not defined");
+        assert(config.teams.B, "Team A config is not defined");
+        assert(config.teams.B.name, "Team B name is not defined");
+        assert(config.teams.B.role, "Team B role is not defined");
     });
 });
 
@@ -128,7 +140,7 @@ describe("Discord", function () {
             const server_channel = server.channel;
             const channel = await this.guild.channels.get(server_channel);
     
-            assert(channel, `Server channel ${server_channel} not present in guild ${config.discord.guild}`);
+            assert(channel, `Server channel for ${server.name} not present in guild ${config.discord.guild}`);
         }
     });
     
@@ -140,6 +152,24 @@ describe("Discord", function () {
         assert(role_admin, "Admin role does not exist in guild");
         assert(role_player, "Player role does not exist in guild");
         // assert(role_captain, "Captain role does not exist in guild");
+    });
+
+    it('should have roles for servers', async function () {
+        for (const name in config.servers) {            
+            const server = config.servers[name];
+            const server_role = server.role;
+            const role = await this.guild.roles.get(server_role);
+    
+            assert(role, `Server role for ${server.name} not present in guild ${config.discord.guild}`);
+        }
+    });
+
+    it('should have roles for teams', async function () {
+        const roleA = await this.guild.roles.get(app.config.teams.A.role);
+        const roleB = await this.guild.roles.get(app.config.teams.B.role);
+
+        assert(roleA, `Team A role is not present in guild ${config.discord.guild}`);
+        assert(roleB, `Team B role is not present in guild ${config.discord.guild}`);
     });
 });
 

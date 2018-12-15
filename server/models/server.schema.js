@@ -13,6 +13,7 @@ module.exports = {
         rcon: String,
         channel: String,
         format: String,
+        role: String,
         players: [{
             type: mongoose.Schema.Types.ObjectId,
             ref: "Player"

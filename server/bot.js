@@ -30,8 +30,23 @@ module.exports = async (app) => {
         }
     });
 
-    checkServers();
+    Command.Register({ 
+        command: 'reset_servers'
+    }, async (args) => {
+        const servers_db = await Server.find();
+        for (let server of servers_db) {
+            await server.remove();
+        }
 
+        checkServers();
+
+        args.message.reply('Success');
+    });
+
+    checkServers();
+    checkPlayers();
+
+    Player.events.on("new", onNewPlayer);
     Server.events.on("update", onServerUpdate);
 
     async function checkServers() {
@@ -42,21 +57,7 @@ module.exports = async (app) => {
     
             if (server_in_db);
             else {
-                const server_new = new Server({
-                    name,
-                    ip: server_config.ip,
-                    port: server_config.port,
-                    rcon: server_config.rcon,
-                    channel: server_config.channel,
-                    format: server_config.formats[0]
-                });
-    
-                try {
-                    await server_new.save();
-                } catch (error) {
-                    log(`Failed to save server ${name} due to error`);
-                    log(error);
-                }
+                await createNewServer(name, server_config);
             }
         }
     
@@ -65,16 +66,14 @@ module.exports = async (app) => {
             await server.setStatus(Server.status.UNKNOWN);
 
             server.discord_channel = await Discord.getGuildChannel(app.config.discord.guild, server.channel);
+            server.discord_role = await Discord.getGuildRole(app.config.discord.guild, server.role);
         }
+    }
 
-        const guild = await Discord.getGuild(app.config.discord.guild);
+    async function checkPlayers() {  
         const players_db = await Player.find();
         for (let player of players_db) {
             player.discord_user = await Discord.getMember(app.config.discord.guild, player.discord);
-
-            if (player.discord === guild.ownerID) {
-                player.owner = true;
-            }
         }
     }
 
@@ -115,11 +114,40 @@ module.exports = async (app) => {
                 await divideTeams(server, format);       
                 await server.setStatus(Server.status.SETUP);
             }
-        } else if (server.status === Server.status.SETUP) {
 
+            if (server.players.length === 0) {
+                await server.setDiscordRoleName(`${server.name}: Empty`);
+            } else {
+                await server.setDiscordRoleName(`${server.name}: Waiting (${server.players.length}/${format.size * 2})`);
+            }
+        } else if (server.status === Server.status.SETUP) {
+            await server.setDiscordRoleName(`${server.name}: Setting Up`);
         }
 
         registerCommands(server);
+    }
+
+    async function onNewPlayer(user) {
+        checkPlayers();
+    }
+
+    async function createNewServer(name, server) {
+        const server_new = new Server({
+            name,
+            ip: server.ip,
+            port: server.port,
+            rcon: server.rcon,
+            channel: server.channel,
+            format: server.formats[0],
+            role: server.role
+        });
+
+        try {
+            await server_new.save();
+        } catch (error) {
+            log(`Failed to save server ${name} due to error`);
+            log(error);
+        }
     }
 
     function registerCommands(server) {
@@ -350,13 +378,13 @@ module.exports = async (app) => {
                 }
 
                 fields.push({
-                    name: 'Team A',
+                    name: app.config.teams.A.name,
                     value: players_teamA,
                     inline: true
                 });
 
                 fields.push({
-                    name: 'Team B',
+                    name: app.config.teams.B.name,
                     value: players_teamB,
                     inline: true
                 });

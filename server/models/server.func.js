@@ -15,6 +15,7 @@ module.exports = (schema) => {
 
     let conns = {};
     let channels = {};
+    let roles = {};
     let flags = {};
 
     schema.add({
@@ -51,6 +52,16 @@ module.exports = (schema) => {
         if (!channels[this.id]) throw new Error(`Channel for server ${this.name} does not exist.`)
 
         return channels[this.id];
+    });
+
+    schema.virtual('discord_role').set(function(role) {
+        roles[this.id] = role;
+    });
+
+    schema.virtual('discord_role').get(function() {
+        if (!roles[this.id]) throw new Error(`Role for server ${this.name} does not exist.`)
+
+        return roles[this.id];
     });
 
     schema.virtual("commands_status").set(function (state) {
@@ -183,6 +194,10 @@ module.exports = (schema) => {
         }
       
         return message;
+    }
+
+    schema.methods.setDiscordRoleName = async function (name) {
+        await this.discord_role.setName(name);
     }
 
     schema.methods.sendRconCommand = async function (command) {

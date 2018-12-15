@@ -53,7 +53,7 @@ module.exports = (schema) => {
     }
 
     schema.methods.leaveServer = async function () {
-        await this.changeDiscordNickname('', `Joined ${this.server.name}`);
+        await this.removeDiscordRole(this.server.role);
 
         this.status = statuses.FREE;
         this.server = null;
@@ -65,9 +65,7 @@ module.exports = (schema) => {
         this.status = statuses.JOINED;
         this.server = server.id;
 
-        const nickname = this.discord_user.user.username;
-
-        await this.changeDiscordNickname(`[${server.name}] ${nickname}`, `Joined ${server.name}`);
+        await this.addDiscordRole(server.role);
         await this.save();
     }
 
@@ -81,5 +79,13 @@ module.exports = (schema) => {
                 log("Cannot change owner's nickname");
             }
         }
+    }
+
+    schema.methods.addDiscordRole = async function (role_id) {
+        await this.discord_user.addRole(role_id);
+    }
+
+    schema.methods.removeDiscordRole = async function (role_id) {
+        await this.discord_user.removeRole(role_id);
     }
 }

@@ -96,6 +96,13 @@ module.exports = async (app) => {
         return channel;
     }
 
+    async function getGuildRole(guild_id, role_id) {
+        const guild = await getGuild(guild_id);
+        const role = await guild.roles.get(role_id);
+
+        return role;
+    }
+
     async function assignRole(guild_id, user_id, role_id) {
         const guild = await getGuild(guild_id);
         const member = await getMember(user_id);
@@ -122,7 +129,7 @@ module.exports = async (app) => {
     try {
         await login();
 
-        return { login, sendToChannel, getDMChannel, getUser, getMember, getGuild, getGuildChannel, assignRole, on, core: bot };
+        return { login, sendToChannel, getDMChannel, getUser, getMember, getGuild, getGuildChannel, getGuildRole, assignRole, on, core: bot };
     } catch (error) {
         log(error);
 
