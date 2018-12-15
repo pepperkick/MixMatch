@@ -1,15 +1,17 @@
 const debug = require('debug');
+const Rcon = require('rcon-client').Rcon;
 
 const Exception = require("./objects/exception");
 
 const log = debug("app:bot");
+const conns = {};
 
 module.exports = async (app) => {
     const Server = app.connection.model("Server");
     const Player = app.connection.model("Player");
     const Command = app.object.command;
     const Discord = app.discord;
-
+    
     Command.Register({ 
         command: 'ping'
     }, (args) => {
@@ -28,41 +30,64 @@ module.exports = async (app) => {
         }
     });
 
-    const servers = app.config.servers;
-    for (let name in servers) {
-        const server_config = servers[name];
-        const server_in_db = await Server.findOne({ name });
+    checkServers();
 
-        if (server_in_db);
-        else {
-            const server_new = new Server({
-                name,
-                ip: server_config.ip,
-                port: server_config.port,
-                rcon: server_config.rcon,
-                channel: server_config.channel,
-                format: server_config.formats[0]
-            });
+    Server.events.on("update", onServerUpdate);
 
-            try {
-                await server_new.save();
-            } catch (error) {
-                log(`Failed to save server ${name} due to error`);
-                log(error);
+    async function checkServers() {
+        const servers = app.config.servers;
+        for (let name in servers) {
+            const server_config = servers[name];
+            const server_in_db = await Server.findOne({ name });
+    
+            if (server_in_db);
+            else {
+                const server_new = new Server({
+                    name,
+                    ip: server_config.ip,
+                    port: server_config.port,
+                    rcon: server_config.rcon,
+                    channel: server_config.channel,
+                    format: server_config.formats[0]
+                });
+    
+                try {
+                    await server_new.save();
+                } catch (error) {
+                    log(`Failed to save server ${name} due to error`);
+                    log(error);
+                }
             }
+        }
+    
+        const servers_db = await Server.find();
+        for (let server of servers_db) {
+            await server.setStatus(Server.status.UNKNOWN);
         }
     }
 
-    const servers_status_unknown = await Server.find({ status: Server.status.UNKNOWN });
-    for (let server of servers_status_unknown) {
-        server.status = Server.status.FREE;
-
-        await server.save();
-    }    
+    async function onServerUpdate(server) {
+        if (server.status === Server.status.UNKNOWN) {
+            try {
+                server.conn = await createRconConnection(server.ip, server.port, server.rcon);
+        
+                if (await checkPluginVersion(server)) {        
+                    await server.setStatus(Server.status.FREE);
+                } else {
+                    log(`Server plugin version does not match with ${app.config.plugin.version}`);
     
-    const servers_status_free = await Server.find({ status: Server.status.FREE });
-    for (let server of servers_status_free) {
-        registerCommands(server);
+                    await server.setStatus(Server.status.OUTDATED);
+                }
+            } catch (error) {
+                log(error);
+
+                await server.setStatus(Server.status.ERROR);
+            }
+        } else if (server.status === Server.status.FREE) {
+            registerCommands(server);
+        } else if (server.status === Server.status.SETUP) {
+
+        }
     }
 
     function registerCommands(server) {
@@ -263,7 +288,7 @@ module.exports = async (app) => {
             log(error);
         }
     }
-    
+
     async function resetServer(args, server) {
         try {
             await server.removeAllPlayers();
@@ -273,5 +298,17 @@ module.exports = async (app) => {
             log(`Failed to reset the server ${server.name}`);
             log(error);
         }
+    }
+
+    async function createRconConnection(host, port, password) {
+        const rcon = new Rcon({packetResponseTimeout: 1000});
+        await rcon.connect({ host, port, password });
+        return rcon;
+    }
+
+    async function checkPluginVersion(server) {
+        let version = await server.conn.send('cc_version');
+    
+        return version.includes(app.config.plugin.version);
     }
 };

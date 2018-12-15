@@ -1,14 +1,11 @@
 const log = require('debug')('app:events:server');
 
+const conns = {};
+
 module.exports = app => {    
     const Server = app.connection.model("Server");
     const Discord = app.discord;
-
-    Server.on("discord_send_message", async (data) => {
-        const { doc, message} = data;
-        
-        await Discord.sendToChannel(doc.channel, message);
-    });
+    const Rcon = app.rcon;
 
     Server.on("update", async server => {
         if (server.status = Server.status.FREE) {
@@ -22,5 +19,11 @@ module.exports = app => {
                 await server.save();
             }
         }
+    });
+
+    Server.on("discord_send_message", async (data) => {
+        const { doc, message} = data;
+        
+        await Discord.sendToChannel(doc.channel, message);
     });
 }

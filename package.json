@@ -10,6 +10,7 @@
     "test-config": "yarn test -g Configuration",
     "test-discord": "yarn test -g Discord",
     "test-db": "yarn test -g Database",
+    "test-rcon": "yarn test -g RCON",
     "build-sm": "spcomp -i plugin/include -o dist/mixmatch plugin/main.sp"
   },
   "author": "PepperKick",
@@ -24,6 +25,8 @@
     "mongoose": "^5.3.4",
     "passport": "^0.4.0",
     "passport-discord": "^0.1.3",
+    "prompt": "^1.0.0",
+    "rcon-client": "^3.1.4",
     "steamid": "^1.1.0"
   },
   "devDependencies": {

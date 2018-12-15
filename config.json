@@ -36,5 +36,8 @@
             "size": 0,
             "hidden": false
         }
+    },
+    "plugin": {
+        "version": "1.0.0"
     }
 }

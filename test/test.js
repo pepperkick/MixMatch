@@ -2,6 +2,7 @@ const assert = require("assert");
 const mongoose = require('mongoose');
 const Discord = require('discord.js');
 const mongen = require('@abskmj/mongen');
+const Rcon = require("rcon-client").Rcon;
 
 // const app = require("../server/app").init();const env = process.env.NODE_ENV;
 
@@ -62,15 +63,15 @@ describe("Configuration", function () {
     
             assert(server.channel, `Channel id for server ${name} not defined`);
             assert(server.formats, `Game formats for server ${name} not defined`);
-            // assert(server.ip, `IP for server ${name} not defined`);
-            // assert(server.port, `Port for server ${name} not defined`);
-            // assert(server.rcon, `RCON password for server ${name} not defined`);
+            assert(server.ip, `IP for server ${name} not defined`);
+            assert(server.port, `Port for server ${name} not defined`);
+            assert(server.rcon, `RCON password for server ${name} not defined`);
 
-            // assert(server.ip instanceof String, `IP for server ${name} must be a String`);
-            // assert(server.port instanceof String || isNum(server.port), `Port for server ${name} must be a String or Number`);
-            // assert(server.rcon instanceof String, `RCON password for server ${name} must be a String`);
+            assert(typeof server.ip === 'string', `IP for server ${name} must be a String`);
+            assert(typeof server.ip === 'string' || isNum(server.port), `Port for server ${name} must be a String or Number`);
+            assert(typeof server.ip === 'string', `RCON password for server ${name} must be a String`);
 
-            // assert(isValidIp(server.ip), `Server IP ${server.ip} is not valid`);
+            assert(isValidIp(server.ip), `Server IP ${server.ip} is not valid`);
 
             for (const i in server.formats) {
                 assert(config.formats[server.formats[i]], `Format ${server.formats[i]} does not exist`);
@@ -230,7 +231,7 @@ describe("Database", async function () {
             assert(this.server.status === this.Server.status.UNKNOWN, "Server status value did not set to UNKNOWN");
             assert(!this.server.isFree(), "'isFree' function did not return false");
             
-            await this.server.setFree();
+            await this.server.setStatus(this.Server.status.FREE);
 
             assert(this.server.status === this.Server.status.FREE, "Server status value did not set to FREE");
             assert(this.server.isFree(), "'isFree' function did not return true");
@@ -360,6 +361,50 @@ describe("Database", async function () {
                 if (error.code === "ERR_ASSERTION") 
                     throw error;
             } else {
+                assert.fail(error);
+            }
+        }
+    });
+});
+
+describe("RCON", async function () {
+    before(async function () {
+        this.conns = {};
+    });
+
+    after(async function () {
+        for (const name in config.servers) {
+            if (this.conns[name]) 
+                await this.conns[name].disconnect();
+
+            delete this.conns[name];
+        }
+
+        delete this.conns;
+    });
+
+    it("should connect to servers", async function () {
+        for (const name in config.servers) {
+            try {
+                const server = config.servers[name];
+                const rcon = new Rcon({packetResponseTimeout: 1000});
+                
+                await rcon.connect({ host: server.ip, port: server.port, password: server.rcon });
+
+                this.conns[name] = rcon;
+            } catch (error) {
+                assert.fail(error);
+            }
+        }
+    });
+
+    it("should get response from server plugin", async function () {
+        for (const name in config.servers) {
+            try {            
+                const version = await this.conns[name].send("cc_version");
+
+                assert(version.includes(config.plugin.version, "Could not get response from plugin"));
+            } catch (error) {
                 assert.fail(error);
             }
         }

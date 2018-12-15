@@ -1,7 +1,6 @@
 const Exception = require("../objects/exception");
 
 const log = require('debug')('app:models:server');
-
 module.exports = (schema) => {
     const statuses = Object.freeze({
         UNKNOWN: 'unknown',
@@ -10,15 +9,29 @@ module.exports = (schema) => {
         SETUP: 'setup',
         WAITING: 'waiting',
         LIVE: 'live',
-        ENDED: 'ended'
+        ENDED: 'ended',
+        ERROR: 'error'
     });
 
+    let rcon = null;
+    let channel = null;
+    
     schema.add({
         status: {
             type: String,
             enum: Object.values(statuses),
             default: statuses.UNKNOWN
         }
+    });
+
+    schema.virtual('conn').set(function(_rcon) {
+        rcon = _rcon;
+    });
+
+    schema.virtual('conn').get(function() {
+        if (!rcon) throw new Error(`RCON connection for server ${this.name} does not exist.`)
+
+        return rcon;
     });
 
     schema.statics.status = statuses;
@@ -31,10 +44,9 @@ module.exports = (schema) => {
         return await this.findOne({ ip, port });
     }
 
-    schema.methods.setFree = async function () {
-        this.status = statuses.FREE;
-
-        await this.removeAllPlayers();
+    schema.methods.setStatus = async function (status) {
+        this.status = status;
+        
         await this.save();
     }
 
@@ -122,6 +134,13 @@ module.exports = (schema) => {
         this.model("Server").events.emit("discord_send_message", {
             doc: this,
             message
+        });
+    }
+
+    schema.methods.sendRconCommand = async function (command) {
+        this.model("Server").events.emit("rcon_command", {
+            doc: this,
+            command
         });
     }
 }
