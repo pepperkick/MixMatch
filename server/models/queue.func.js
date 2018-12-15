@@ -191,7 +191,7 @@ module.exports = (schema) => {
     }
 
     schema.methods.sendDiscordMessage = async function (options) {        
-        const message = await this.channel.send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
+        const message = await this.discord_channel.send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
       
         if (!message) {
             throw new Error(`Failed to send message to channel ${channel.id}`);
