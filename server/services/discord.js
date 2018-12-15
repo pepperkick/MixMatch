@@ -105,7 +105,7 @@ module.exports = async (app) => {
 
     async function assignRole(guild_id, user_id, role_id) {
         const guild = await getGuild(guild_id);
-        const member = await getMember(user_id);
+        const member = await getMember(guild_id, user_id);
     
         if (!guild) {
             throw new Error(`Failed to find guild with id ${guild_id}`);

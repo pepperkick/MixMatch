@@ -136,7 +136,7 @@ module.exports = async (app) => {
             
             log(`Setting up ${queue.name} for ${queue.format} with map ${queue.map}`);
 
-            await queue.sendRconCommand(`mx_set_map ${map}`);
+            await queue.sendRconCommand(`mx_set_map ${queue.map}`);
             await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
         } else if (queue.status === Queue.status.WAITING) {
             log(`Server ${queue.name} status is now waiting.`);
