@@ -122,7 +122,7 @@ module.exports = async (app) => {
 
                 await divideTeams(queue, format);       
                 await queue.sendRconCommand('mx_reset');
-                await queue.sendRconCommand(`mx_set_status${Queue.status.SETUP}`);         
+                await queue.sendRconCommand(`mx_set_status ${Queue.status.SETUP}`);         
                 await queue.setStatus(Queue.status.SETUP);
             }
 
