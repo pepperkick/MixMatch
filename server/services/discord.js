@@ -41,7 +41,7 @@ module.exports = async (app) => {
 
             await Discord.login();
         }
-        
+
         em.emit("error", error);
     });
 
@@ -50,8 +50,6 @@ module.exports = async (app) => {
         if (typeof channel === String || typeof channel == "string" || typeof channel === Number) {
             channel = await bot.channels.get(channel);
         }
-
-        log(channel.id);
 
         const message = await channel.send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
       
@@ -67,11 +65,11 @@ module.exports = async (app) => {
     }
 
     async function getMember(guild, id) {
-        return await await bot.guilds.get(guild).members.get(id);
+        return await bot.guilds.get(guild).members.get(id);
     }
 
-    async function getDMChannel(id) {
-        const user = await getUser(id);
+    async function getDMChannel(channel_id) {
+        const user = await getUser(channel_id);
         let channel = await user.dmChannel;
 
         if (!channel) {
@@ -82,24 +80,35 @@ module.exports = async (app) => {
             throw new Error("Failed to get DM Channel for user", id);
         }
 
-        log("User DM Channel", channel.id);
+        return channel;
+    }
+
+    async function getGuild(guild_id) {
+        const guild = await bot.guilds.get(guild_id);
+
+        return guild;
+    }
+
+    async function getGuildChannel(guild_id, channel_id) {
+        const guild = await getGuild(guild_id);
+        const channel = await guild.channels.get(channel_id);
 
         return channel;
     }
 
-    async function assignRole(id, _guild, role) {
-        const guild = await bot.guilds.get(_guild);
-        const member = await guild.members.get(id);
+    async function assignRole(guild_id, user_id, role_id) {
+        const guild = await getGuild(guild_id);
+        const member = await getMember(user_id);
     
         if (!guild) {
             throw new Error(`Failed to find guild with id ${_guild}`);
         }
 
         if (!member) {
-            throw new Error(`Failed to find member with id ${id}`);
+            throw new Error(`Failed to find member with id ${user_id}`);
         }
 
-        await member.addRole(role);
+        await member.addRole(role_id);
     }
 
     async function login() {
@@ -113,7 +122,7 @@ module.exports = async (app) => {
     try {
         await login();
 
-        return { login, sendToChannel, getDMChannel, getUser, getMember, assignRole, on, core: bot };
+        return { login, sendToChannel, getDMChannel, getUser, getMember, getGuild, getGuildChannel, assignRole, on, core: bot };
     } catch (error) {
         log(error);
 

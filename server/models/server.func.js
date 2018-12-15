@@ -13,25 +13,54 @@ module.exports = (schema) => {
         ERROR: 'error'
     });
 
-    let rcon = null;
-    let channel = null;
-    
+    let conns = {};
+    let channels = {};
+    let flags = {};
+
     schema.add({
         status: {
             type: String,
             enum: Object.values(statuses),
             default: statuses.UNKNOWN
+        },
+        teamA: {
+            type: Array,
+            default: []
+        },
+        teamB: {
+            type: Array,
+            default: []
         }
     });
 
-    schema.virtual('conn').set(function(_rcon) {
-        rcon = _rcon;
+    schema.virtual('conn').set(function(rcon) {
+        conns[this.id] = rcon;
     });
 
     schema.virtual('conn').get(function() {
-        if (!rcon) throw new Error(`RCON connection for server ${this.name} does not exist.`)
+        if (!conns[this.id]) throw new Error(`RCON connection for server ${this.name} does not exist.`)
 
-        return rcon;
+        return conns[this.id];
+    });
+
+    schema.virtual('discord_channel').set(function(channel) {
+        channels[this.id] = channel;
+    });
+
+    schema.virtual('discord_channel').get(function() {
+        if (!channels[this.id]) throw new Error(`Channel for server ${this.name} does not exist.`)
+
+        return channels[this.id];
+    });
+
+    schema.virtual("commands_status").set(function (state) {
+        if (!flags[this.id]) flags[this.id] = {};
+
+        flags[this.id].command_status = state;
+    });
+
+    schema.virtual("commands_status").get(function () {
+        return (flags[this.id] && flags[this.id].command_status) || 'unknown';
     });
 
     schema.statics.status = statuses;
@@ -75,44 +104,60 @@ module.exports = (schema) => {
         await player.joinServer(this);
         await this.save();
 
-        log(`${this.name}: Added Player ${player.id}`);
+        log(`${this.name}: Added Player ${player.id} (${player.discord})`);
 
         return true;
     }
 
-    schema.methods.removePlayer = async function (player) {
+    schema.methods.removePlayer = async function (player, force = false) {
         player = await this.model('Player').checkOrGet(player);
         player = await player.populate("server").execPopulate();
 
-        if (player.server === null) 
-            throw new Exception("PLAYER_NOT_IN_QUEUE", `Player ${player.id} is not in any queue`);
+        if (!force) {
+            if (player.server === null) 
+                throw new Exception("PLAYER_NOT_IN_QUEUE", `Player ${player.id} is not in any queue`);
 
-        if (player.server && player.server.id != this.id) 
-            throw new Exception("PLAYER_NOT_IN_CURRENT_QUEUE", `Player ${player.id} is not in current queue`);
+            if (player.server && player.server.id != this.id) 
+                throw new Exception("PLAYER_NOT_IN_CURRENT_QUEUE", `Player ${player.id} is not in current queue`);
 
-        if (!this.isFree())
-            throw new Exception("SERVER_NOT_FREE", `Server status is currently ${this.status} which needs to be ${statuses.FREE} for player to join.`);
+            if (!this.isFree())
+                throw new Exception("SERVER_NOT_FREE", `Server status is currently ${this.status} which needs to be ${statuses.FREE} for player to join.`);
 
-        for (const i in this.players) {
-            if (this.players[i].toString() === player.id.toString()) {
-                this.players.splice(i, 1);
+            for (const i in this.players) {
+                if (this.players[i].toString() === player.id.toString()) {
+                    this.players.splice(i, 1);
 
-                break;
+                    break;
+                }
             }
         }
 
         await player.leaveServer();
         await this.save();
 
-        log(`${this.name}: Removed Player ${player.id}`);
+        log(`${this.name}: Removed Player ${player.id} (${player.discord})`);
 
         return true;
     }
     
     schema.methods.removeAllPlayers = async function () {
         for (const player of this.players) {
-            await this.removePlayer(player);
+            await this.removePlayer(player, true);
         }
+
+        for (const player of this.teamA) {
+            await this.removePlayer(player, true);
+        }
+
+        for (const player of this.teamB) {
+            await this.removePlayer(player, true);
+        }
+
+        this.teamA = [];
+        this.teamB = [];
+
+        await this.setStatus(statuses.FREE);
+        await this.sendRconCommand("cc_reset");
     }
 
     schema.methods.changeFormat = async function (format) {
@@ -130,17 +175,17 @@ module.exports = (schema) => {
         await this.save();
     }
 
-    schema.methods.sendDiscordMessage = async function (message) {
-        this.model("Server").events.emit("discord_send_message", {
-            doc: this,
-            message
-        });
+    schema.methods.sendDiscordMessage = async function (options) {        
+        const message = await this.channel.send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
+      
+        if (!message) {
+            throw new Error(`Failed to send message to channel ${channel.id}`);
+        }
+      
+        return message;
     }
 
     schema.methods.sendRconCommand = async function (command) {
-        this.model("Server").events.emit("rcon_command", {
-            doc: this,
-            command
-        });
+        return this.conn.send(command);
     }
 }

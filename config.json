@@ -34,7 +34,7 @@
     "formats": {
         "Type": {
             "size": 0,
-            "hidden": false
+            "hide": false
         }
     },
     "plugin": {
