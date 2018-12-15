@@ -2,9 +2,9 @@ const assert = require("assert");
 const mongoose = require('mongoose');
 const Discord = require('discord.js');
 const mongen = require('@abskmj/mongen');
+const request = require('async-request');
+const args = require('optimist').argv;
 const Rcon = require("rcon-client").Rcon;
-
-// const app = require("../server/app").init();const env = process.env.NODE_ENV;
 
 const env = process.env.NODE_ENV;
 
@@ -100,6 +100,7 @@ describe("Discord", function () {
     });
 
     after(async function () {
+        this.timeout(10000);
         await this.bot.destroy();
     });
 
@@ -403,17 +404,14 @@ describe("RCON", async function () {
     });
 
     after(async function () {
-        for (const name in config.servers) {
-            if (this.conns[name]) 
-                await this.conns[name].disconnect();
-
-            delete this.conns[name];
-        }
+        this.timeout(10000);
 
         delete this.conns;
     });
 
     it("should connect to servers", async function () {
+        this.timeout(5000);
+
         for (const name in config.servers) {
             try {
                 const server = config.servers[name];
@@ -467,11 +465,87 @@ describe("RCON", async function () {
     });
 });
 
-// describe("Application", function () {
-//     it("Initialized", function () {
-//         assert(app);
-//     });
-// });
+describe('Application', function () { 
+    this.timeout(10000);
+
+    before(async function () {
+        if (!args.g) process.exit();  
+    });
+
+    after(async function () {
+        process.exit();  
+    });
+
+    it("should not cause any exception", async function () {
+        try {
+            this.app = await require("../server/app").init();
+
+            const Server = await this.app.connection.model("Server");
+            const Player = await this.app.connection.model("Player");
+            
+            this.server = new Server({
+                name: "test",
+                ip: "1.1.1.1",
+                port: 20,
+                rcon: "test123",
+                channel: "123",
+                role: "123",
+                format: "Test"
+            });
+
+            await this.server.save();
+            await this.server.delete();
+            
+            this.player = new Player({
+                discord: "1234",
+                steam: "5678"
+            });
+
+            await this.player.save();
+            await this.player.delete();
+        } catch (error) {
+            assert.fail(error);
+        }
+    });
+});
+
+describe('API', function () { 
+    this.timeout(10000);
+
+    before(async function () {
+        if (!args.g) process.exit();
+        this.app = await require("../server/app").init();        
+    });
+
+    after(async function () {
+        if (this.server) await this.server.delete();
+        process.exit(0);        
+    });
+
+    it("should respond ok for server status call", async function () {
+        try {
+            const Server = await this.app.connection.model("Server");
+            
+            this.server = new Server({
+                name: "test",
+                ip: "1.1.1.1",
+                port: 20,
+                rcon: "test123",
+                channel: "123",
+                role: "123",
+                format: "Test"
+            });
+
+            await this.server.save();
+
+            const response = await request(`http://${config.host}:${config.port}/plugin/status_change?name=${this.server.name}&status=free`);
+
+            assert(response.statusCode === 200, `Set status API call failed with status code ${response.statusCode}`);
+        } catch (error) {
+            assert.fail(error);
+        }
+    });
+});
 
 const isValidIp = value => (/^(?:(?:^|\.)(?:2(?:5[0-5]|[0-4]\d)|1?\d?\d)){4}$/.test(value) ? true : false);
 const isNum = value => typeof value === "number" && Number.isInteger(value);

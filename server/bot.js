@@ -125,10 +125,14 @@ module.exports = async (app) => {
                 await server.setStatus(Server.status.SETUP);
             }
 
-            if (server.players.length === 0) {
-                await server.setDiscordRoleName(`${server.name}: Empty`);
-            } else {
-                await server.setDiscordRoleName(`${server.name}: Queuing (${server.players.length}/${format.size * 2})`);
+            try {
+                if (server.players.length === 0) {
+                    await server.setDiscordRoleName(`${server.name}: Empty`);
+                } else {
+                    await server.setDiscordRoleName(`${server.name}: Queuing (${server.players.length}/${format.size * 2})`);
+                }
+            } catch (error) {
+                log(`Failed to set role name for server ${server.name}`, error);
             }
         } else if (server.status === Server.status.SETUP) {
             const map = format.maps[Math.floor(Math.random() * format.maps.length)];           

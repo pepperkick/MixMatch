@@ -1,5 +1,7 @@
 const express = require('express');
 
+const log = require('debug')('app:routes:api:plugin');
+
 module.exports = (app) => {
     const Server = app.connection.model("Server");
     const Player = app.connection.model("Player");
@@ -22,19 +24,19 @@ module.exports = (app) => {
     
             const server = await Server.findByName(name);
     
-            if (!name) {
-                throw new Error(`No server were found with name ${name}`);
+            if (!server) {
+                throw new Error(`No server were found with name '${name}'`);
             }
             
             log(`API Call for status_change: ${name} ${status}`);
     
             await server.setStatus(status);
     
-            res.status(200);
+            res.sendStatus(200);
         } catch (error) {
             log(`Failed to change server status due to ${error}`);
 
-            res.status(404);
+            res.sendStatus(404);
         }
     });
 

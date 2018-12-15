@@ -27,4 +27,6 @@ module.exports.init = async() => {
     app.listen(app.config.port);
     
     log('application listening on port', app.config.port);
+
+    return app;
 }

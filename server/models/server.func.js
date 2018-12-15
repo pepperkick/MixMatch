@@ -39,7 +39,7 @@ module.exports = (schema) => {
     });
 
     schema.virtual('conn').get(function() {
-        if (!conns[this.id]) throw new Error(`RCON connection for server ${this.name} does not exist.`)
+        if (!conns[this.id]) throw new Error(`RCON connection for server '${this.name}' does not exist.`)
 
         return conns[this.id];
     });
@@ -49,7 +49,7 @@ module.exports = (schema) => {
     });
 
     schema.virtual('discord_channel').get(function() {
-        if (!channels[this.id]) throw new Error(`Channel for server ${this.name} does not exist.`)
+        if (!channels[this.id]) throw new Error(`Channel for server '${this.name}' does not exist.`)
 
         return channels[this.id];
     });
@@ -59,7 +59,7 @@ module.exports = (schema) => {
     });
 
     schema.virtual('discord_role').get(function() {
-        if (!roles[this.id]) throw new Error(`Role for server ${this.name} does not exist.`)
+        if (!roles[this.id]) throw new Error(`Role for server '${this.name}' does not exist.`)
 
         return roles[this.id];
     });
