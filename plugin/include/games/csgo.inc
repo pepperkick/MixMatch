@@ -41,6 +41,10 @@ public void Game_OnPlayerConnectPost(int client) {
 
     PlayerName.GetString(steam, name, sizeof(name));
     SetClientName(client, name);
+    SendRequest("player_connected", parameters);
+
+    StringMap parameters = new StringMap();
+    parameters.SetString("id", steam);
 }
 
 public Action Event_GameOver(Event event, const char[] name, bool dontBroadcast) {

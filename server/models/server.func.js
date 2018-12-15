@@ -1,3 +1,5 @@
+const Gamedig = require('gamedig');
+
 const Exception = require("../objects/exception");
 
 const log = require('debug')('app:models:server');
@@ -204,5 +206,13 @@ module.exports = (schema) => {
 
     schema.methods.sendRconCommand = async function (command) {
         return this.conn.send(command);
+    }
+    
+    schema.methods.queryGameServer = async function () {
+        return Gamedig.query({
+            host: this.ip,
+            port: this.port,
+            type: 'tf2'
+        })
     }
 }

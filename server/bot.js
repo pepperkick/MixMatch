@@ -48,8 +48,9 @@ module.exports = async (app) => {
     checkPlayers();
 
     Player.events.on("new", onNewPlayer);
-    Player.events.on("player_left_server", onPlayerLeftServer);
+    Player.events.on("player_left_queue", onPlayerLeftQueue);
     Server.events.on("update", onServerUpdate);
+    app.on("server_player_connected", onPlayerConnectedToServer);
 
     async function checkServers() {
         const servers = app.config.servers;
@@ -91,18 +92,19 @@ module.exports = async (app) => {
                 if (await checkPluginVersion(server)) {        
                     const server_status = await server.sendRconCommand("mx_getstatus");
 
-                    if (server_status.includes("setup")) {
-                        await server.setStatus(Server.status.SETUP);
+                    await server.sendRconCommand(`mx_init ${app.config.host} ${app.config.port} ${server.name}`);
 
-                        await server.sendRconCommand(`mx_init ${app.config.host} ${app.config.port} ${server.name}`);
+                    if (server_status.includes(Server.status.SETUP)) {
+                        await server.setStatus(Server.status.SETUP);
+                    } else if (server_status.includes(Server.status.WAITING)) { 
+                        await server.setStatus(Server.status.WAITING);                        
                     } else {
                         await server.setStatus(Server.status.FREE);
 
-                        await server.sendRconCommand(`mx_init ${app.config.host} ${app.config.port} ${server.name}`);
+                        await server.sendRconCommand(`mx_reset`);
                         await server.sendRconCommand(`mx_teamsize ${format.size}`);
                         await server.sendRconCommand(`mx_setformat ${server.format}`);
                         await server.sendRconCommand(`mx_restrict_players 1`);
-
                     }
                 } else {
                     log(`Server plugin version does not match with ${app.config.plugin.version}`);
@@ -139,19 +141,30 @@ module.exports = async (app) => {
 
             await server.setDiscordRoleName(`${server.name}: Setting Up`);
             await server.sendRconCommand(`mx_setmap ${map}`);
-
+        } else if (server.status === Server.status.WAITING) {
+            await server.setDiscordRoleName(`${server.name}: Waiting (${server.players.length}/${format.size * 2})`);
         }
 
         registerCommands(server);
     }
 
-    async function onPlayerLeftServer(player) {
+    async function onPlayerLeftQueue(player) {
         await player.removeDiscordRole(app.config.teams.A.role);
         await player.removeDiscordRole(app.config.teams.B.role);
     }
 
     async function onNewPlayer(user) {
         checkPlayers();
+    }
+
+    async function onPlayerConnectedToServer(data) {
+        const { server, player } = data;
+        const format = app.config.formats[server.format];
+        const query = await server.queryGameServer();
+        const count = query.players.length;
+
+        await player.setStatus(Player.status.CONNECTED);        
+        await server.setDiscordRoleName(`${server.name}: Waiting (${count}/${format.size * 2})`);
     }
 
     async function createNewServer(name, server) {

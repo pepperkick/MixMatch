@@ -21,6 +21,10 @@ public void Game_OnPlayerConnectPost(int client) {
     PlayerTeam.GetString(steam, team, sizeof(team));
     ChangeClientTeam(client, StringToInt(team));
 
+    StringMap parameters = new StringMap();
+    parameters.SetString("id", steam);
+    SendRequest("player_connected", parameters);
+
     ShowVGUIPanel(client, PANEL_CLASS_RED);
 }
 

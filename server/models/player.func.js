@@ -3,7 +3,8 @@ const log = require('debug')('app:models:player');
 module.exports = (schema) => {    
     const statuses = Object.freeze({
         FREE: "FREE",
-        JOINED: "JOINED"
+        JOINED: "JOINED",
+        CONNECTED: "CONNECTED"
     });
 
     const discord_users = {};
@@ -52,6 +53,12 @@ module.exports = (schema) => {
         return player;
     }
 
+    schema.methods.setStatus = async function (status) {
+        this.status = status;
+        
+        await this.save();
+    }
+
     schema.methods.leaveServer = async function () {
         await this.removeDiscordRole(this.server.role);
 
@@ -60,7 +67,7 @@ module.exports = (schema) => {
 
         await this.save();
 
-        this.model('Player').events.emit('player_left_server', this);
+        this.model('Player').events.emit('player_left_queue', this);
     }
 
     schema.methods.joinServer = async function (server) {
@@ -70,7 +77,7 @@ module.exports = (schema) => {
         await this.addDiscordRole(server.role);
         await this.save();
 
-        this.model('Player').events.emit('player_joined_server', this);
+        this.model('Player').events.emit('player_joined_queue', this);
     }
 
     schema.methods.changeDiscordNickname = async function (name, reason) {
