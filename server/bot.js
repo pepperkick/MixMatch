@@ -140,12 +140,12 @@ module.exports = async (app) => {
             
             log(`Setting up ${queue.name} for ${queue.format} with map ${map}`);
 
-            await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
             await queue.sendRconCommand(`mx_set_map ${map}`);
+            await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
         } else if (queue.status === Queue.status.WAITING) {
-            const query = await queue.queryGameQueue();
-            const count = query.players.length;
-            await queue.setDiscordRoleName(`${queue.name}: Waiting (${count}/${format.size * 2})`);
+            log(`Server ${server.name} status is now waiting.`);
+
+            await queue.setDiscordRoleName(`${queue.name}: Waiting (0/${format.size * 2})`);
             await queue.sendDiscordMessage({ embed: {
                     color: 0x00BCD4,                            
                     title: 'Server is Ready',
@@ -158,7 +158,7 @@ module.exports = async (app) => {
                         }
                     ],
                     timestamp: new Date()
-            }})
+            }});
         }
 
         registerCommands(queue);
@@ -369,6 +369,11 @@ module.exports = async (app) => {
                     name: 'Status',
                     value: 'Setting up the server'
                 });
+            } else if (queue.status === Queue.status.WAITING) {
+                fields.push({
+                    name: 'Status',
+                    value: 'Waiting for players to join'
+                });
             }
 
             if (queue.status === Queue.status.FREE) {
@@ -383,7 +388,7 @@ module.exports = async (app) => {
                     value: `${queue.players.length} / ${app.config.formats[format].size * 2}`,
                     inline: true
                 });
-            } else if (queue.status === Queue.status.SETUP) {
+            } else if (queue.status === Queue.status.SETUP || queue.status === Queue.status.WAITING) {
                 fields.push({
                     name: 'Format',
                     value: format
@@ -411,7 +416,7 @@ module.exports = async (app) => {
                         value: players
                     });
                 }
-            } else if (queue.status === Queue.status.SETUP) {
+            } else if (queue.status === Queue.status.SETUP || queue.status === Queue.status.WAITING) {
                 let players_teamA = '';
                 let players_teamB = '';
 
