@@ -153,7 +153,7 @@ module.exports = async (app) => {
                     fields: [
                         {
                             name: "Connect",
-                            value: `steam://connect/${server.ip}:${server.port}`,
+                            value: `steam://connect/${queue.ip}:${queue.port}`,
                             inline: false
                         }
                     ],
@@ -373,6 +373,12 @@ module.exports = async (app) => {
                 fields.push({
                     name: 'Status',
                     value: 'Waiting for players to join'
+                });
+
+                fields.push({
+                    name: "Connect",
+                    value: `steam://connect/${queue.ip}:${queue.port}`,
+                    inline: false
                 });
             }
 
