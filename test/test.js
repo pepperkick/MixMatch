@@ -248,123 +248,123 @@ describe("Database", async function () {
         assert(server_obj2, "Failed to get server from 'findByIp' function");
     });
 
-    it("should put player in server", async function () {
-        try {
-            await this.server.addPlayer(this.player1);
+    // it("should put player in server", async function () {
+    //     try {
+    //         await this.server.addPlayer(this.player1);
 
-            assert(this.server.players.length === 1, "Players array length did not set to 1");
-            assert(this.player1.status === this.Player.status.JOINED, "Player's status was not set to JOINED");
-            assert(this.player1.server == this.server.id, "Player's server was not set to server id");
+    //         assert(this.server.players.length === 1, "Players array length did not set to 1");
+    //         assert(this.player1.status === this.Player.status.JOINED, "Player's status was not set to JOINED");
+    //         assert(this.player1.server == this.server.id, "Player's server was not set to server id");
 
-            await this.server.addPlayer(this.player1);
+    //         await this.server.addPlayer(this.player1);
 
-            assert(this.server.players.length === 1, "Players array length changed from 1");
+    //         assert(this.server.players.length === 1, "Players array length changed from 1");
 
-            await this.server.addPlayer(this.player2);
+    //         await this.server.addPlayer(this.player2);
 
-            assert(this.server.players.length === 2, "Players array length did not set to 2");
-            assert(this.player2.status === this.Player.status.JOINED, "Player's status was not set to JOINED");
-            assert(this.player2.server == this.server.id, "Player's server was not set to server id");
-        } catch (error) {
-            if (error.code) {
-                if (error.code === "ERR_ASSERTION") 
-                    throw error;
-            } else {
-                assert.fail(error);
-            }
-        }
-    });
+    //         assert(this.server.players.length === 2, "Players array length did not set to 2");
+    //         assert(this.player2.status === this.Player.status.JOINED, "Player's status was not set to JOINED");
+    //         assert(this.player2.server == this.server.id, "Player's server was not set to server id");
+    //     } catch (error) {
+    //         if (error.code) {
+    //             if (error.code === "ERR_ASSERTION") 
+    //                 throw error;
+    //         } else {
+    //             assert.fail(error);
+    //         }
+    //     }
+    // });
     
-    it("should remove player from server", async function () {
-        try {
-            await this.server.removePlayer(this.player2);
+    // it("should remove player from server", async function () {
+    //     try {
+    //         await this.server.removePlayer(this.player2);
 
-            assert(this.server.players.length === 1, "Players array length did not set to 1");
-            assert(this.player2.status === this.Player.status.FREE, "Player's status was not set to FREE");
-            assert(this.player2.server == null, "Player's server was not set to null");
+    //         assert(this.server.players.length === 1, "Players array length did not set to 1");
+    //         assert(this.player2.status === this.Player.status.FREE, "Player's status was not set to FREE");
+    //         assert(this.player2.server == null, "Player's server was not set to null");
 
-            await this.server.removePlayer(this.player2);
+    //         await this.server.removePlayer(this.player2);
             
-            assert(this.server.players.length === 1, "Players array length changed from 1");
+    //         assert(this.server.players.length === 1, "Players array length changed from 1");
 
-            await this.server.removePlayer(this.player1);
+    //         await this.server.removePlayer(this.player1);
 
-            assert(this.server.players.length === 0, "Players array length did not set to 0");
-            assert(this.player1.status === this.Player.status.FREE, "Player's status was not set to FREE");
-            assert(this.player1.server == null, "Player's server was not set to null");
-        } catch (error) {
-            if (error.code) {
-                if (error.code === "ERR_ASSERTION") 
-                    throw error;
-            } else {
-                assert.fail(error);
-            }
-        }
-    });
+    //         assert(this.server.players.length === 0, "Players array length did not set to 0");
+    //         assert(this.player1.status === this.Player.status.FREE, "Player's status was not set to FREE");
+    //         assert(this.player1.server == null, "Player's server was not set to null");
+    //     } catch (error) {
+    //         if (error.code) {
+    //             if (error.code === "ERR_ASSERTION") 
+    //                 throw error;
+    //         } else {
+    //             assert.fail(error);
+    //         }
+    //     }
+    // });
     
-    it("should reset server", async function () {
-        try {
-            await this.server.addPlayer(this.player1);
-            await this.server.addPlayer(this.player2);
+    // it("should reset server", async function () {
+    //     try {
+    //         await this.server.addPlayer(this.player1);
+    //         await this.server.addPlayer(this.player2);
             
-            assert(this.server.players.length === 2, "Players array length did not set to 2");
+    //         assert(this.server.players.length === 2, "Players array length did not set to 2");
 
-            await this.server.removeAllPlayers();
+    //         await this.server.removeAllPlayers();
 
-            assert(this.server.players.length === 0, "Players array length did not set to 0");
-        } catch (error) {
-            if (error.code) {
-                if (error.code === "ERR_ASSERTION") 
-                    throw error;
-            } else {
-                assert.fail(error);
-            }
-        }
-    });
+    //         assert(this.server.players.length === 0, "Players array length did not set to 0");
+    //     } catch (error) {
+    //         if (error.code) {
+    //             if (error.code === "ERR_ASSERTION") 
+    //                 throw error;
+    //         } else {
+    //             assert.fail(error);
+    //         }
+    //     }
+    // });
 
-    it("should change server format", async function () {
-        try {
-            await this.server.changeFormat("6v6");
+    // it("should change server format", async function () {
+    //     try {
+    //         await this.server.changeFormat("6v6");
 
-            assert(this.server.format === "6v6", "Server format did not set to 6v6");
+    //         assert(this.server.format === "6v6", "Server format did not set to 6v6");
 
-            await this.server.addPlayer(this.player1);
-            await this.server.changeFormat("4v4");
+    //         await this.server.addPlayer(this.player1);
+    //         await this.server.changeFormat("4v4");
 
-            assert(this.server.format === "6v6", "Server format changed from 6v6");
+    //         assert(this.server.format === "6v6", "Server format changed from 6v6");
 
-            await this.server.removeAllPlayers();
-        } catch (error) {
-            if (error.code) {
-                if (error.code === "ERR_ASSERTION") 
-                    throw error;
-            } else {
-                assert.fail(error);
-            }
-        }
-    });
+    //         await this.server.removeAllPlayers();
+    //     } catch (error) {
+    //         if (error.code) {
+    //             if (error.code === "ERR_ASSERTION") 
+    //                 throw error;
+    //         } else {
+    //             assert.fail(error);
+    //         }
+    //     }
+    // });
 
-    it("should change server status to setup", async function () {
-        try {
-            await this.server.addPlayer(this.player1);
-            await this.server.addPlayer(this.player2);
+    // it("should change server status to setup", async function () {
+    //     try {
+    //         await this.server.addPlayer(this.player1);
+    //         await this.server.addPlayer(this.player2);
 
-            if (server.players.length >= 1 * 2) {
-                server.status = Server.status.SETUP;
+    //         if (server.players.length >= 1 * 2) {
+    //             server.status = Server.status.SETUP;
 
-                await server.save();
-            }
+    //             await server.save();
+    //         }
 
-            assert(this.server.status === this.Server.status.SETUP, "Player's status was not set to SETUP");
-        } catch (error) {
-            if (error.code) {
-                if (error.code === "ERR_ASSERTION") 
-                    throw error;
-            } else {
-                assert.fail(error);
-            }
-        }
-    });
+    //         assert(this.server.status === this.Server.status.SETUP, "Player's status was not set to SETUP");
+    //     } catch (error) {
+    //         if (error.code) {
+    //             if (error.code === "ERR_ASSERTION") 
+    //                 throw error;
+    //         } else {
+    //             assert.fail(error);
+    //         }
+    //     }
+    // });
 });
 
 describe("RCON", async function () {
