@@ -165,8 +165,8 @@ describe("Discord", function () {
     });
 
     it('should have roles for teams', async function () {
-        const roleA = await this.guild.roles.get(app.config.teams.A.role);
-        const roleB = await this.guild.roles.get(app.config.teams.B.role);
+        const roleA = await this.guild.roles.get(config.teams.A.role);
+        const roleB = await this.guild.roles.get(config.teams.B.role);
 
         assert(roleA, `Team A role is not present in guild ${config.discord.guild}`);
         assert(roleB, `Team B role is not present in guild ${config.discord.guild}`);
