@@ -108,7 +108,7 @@ module.exports = async (app) => {
         const member = await getMember(user_id);
     
         if (!guild) {
-            throw new Error(`Failed to find guild with id ${_guild}`);
+            throw new Error(`Failed to find guild with id ${guild_id}`);
         }
 
         if (!member) {
