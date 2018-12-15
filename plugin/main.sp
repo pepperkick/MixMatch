@@ -20,6 +20,7 @@ public Plugin:myinfo = {
 char HostIP[128];
 char HostPort[8];
 char ServerName[16];
+char ServerFormat[16];
 
 ArrayList PlayerSteam;
 StringMap PlayerName;
@@ -36,13 +37,14 @@ public OnPluginStart() {
     PlayerName = new StringMap();
     PlayerTeam = new StringMap();
 
-    RegConsoleCmd("cc_init",      Command_Init);
-    RegConsoleCmd("cc_reset",     Command_Reset);
-    RegConsoleCmd("cc_setmap",    Command_SetMap);
-    RegConsoleCmd("cc_getstatus", Command_GetStatus);
-    RegConsoleCmd("cc_setstatus", Command_SetStatus);
-    RegConsoleCmd("cc_addplayer", Command_AddPlayer);
-    RegConsoleCmd("cc_version",   Command_Version);
+    RegConsoleCmd("mx_init",      Command_Init);
+    RegConsoleCmd("mx_reset",     Command_Reset);
+    RegConsoleCmd("mx_setmap",    Command_SetMap);      // TODO: Change to mx_set_map
+    RegConsoleCmd("mx_setformat", Command_SetFormat);   // TODO: Change to mx_set_format
+    RegConsoleCmd("mx_getstatus", Command_GetStatus);   // TODO: Change to mx_get_status
+    RegConsoleCmd("mx_setstatus", Command_SetStatus);   // TODO: Change to mx_set_status
+    RegConsoleCmd("mx_addplayer", Command_AddPlayer);   // TODO: Change to mx_add_player
+    RegConsoleCmd("mx_version",   Command_Version);
 
     HookEvent("player_changename", Event_NameChange, EventHookMode_Post);
 
@@ -101,7 +103,8 @@ public void OnMapStart() {
         char map[256];
 
         GetCurrentMap(map, sizeof(map));
-        ServerCommand("exec chillylobby/maps/%s", map);
+        ServerCommand("exec mixmatch/maps/%s", map);
+        ServerCommand("exec mixmatch/configs/%s", ServerFormat);
 
         #if defined GAME_CSGO
         ServerCommand("mp_warmuptime 1800");
@@ -117,6 +120,8 @@ public void OnMapStart() {
     } else if (GetStatus() == STATE_WAITING) {
         DebugLog("Map changed during waiting phase, Ignoring...");
     } else {
+        // TODO: Report error if map changes while STATE_LIVE
+
         SetStatus(STATE_FREE);
     }
 
@@ -200,6 +205,18 @@ public Action Command_SetMap(int client, int args) {
     return Plugin_Continue;
 }
 
+public Action Command_SetFormat(int client, int args) {
+    char format[256];
+    
+    GetCmdArg(1, format, sizeof(format));
+
+    Format(ServerFormat, sizeof(ServerFormat), "%s", format);
+
+    PrintToServer("response::%s", format);
+
+    return Plugin_Continue;
+}
+
 public Action Command_SetStatus(int client, int args) {
     char status[16];
 
@@ -245,7 +262,7 @@ public Action Command_GetStatus(int client, int args) {
 }
 
 public Action Command_Version(int client, int args) {
-    ReplyToCommand(0, PLUGIN_VERSION);
+    PrintToServer(PLUGIN_VERSION);
 
     return Plugin_Continue;
 }
@@ -324,7 +341,7 @@ public void Reset(bool notify) {
 public void SendRequest(char[] type, StringMap parameters) {
     char url[1024];
 
-    Format(url, sizeof(url), "http://%s:%s/call/%s", HostIP, HostPort, type);
+    Format(url, sizeof(url), "http://%s:%s/plugin/%s", HostIP, HostPort, type);
 
     HTTPRequest req = HTTPRequest("GET", url, "OnRequestComplete");
     req.headers.SetString("User-Agent", "HTTPRequests for SourceMod");

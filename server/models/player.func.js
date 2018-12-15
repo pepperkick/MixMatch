@@ -59,6 +59,8 @@ module.exports = (schema) => {
         this.server = null;
 
         await this.save();
+
+        this.model('Player').events.emit('player_left_server', this);
     }
 
     schema.methods.joinServer = async function (server) {
@@ -67,6 +69,8 @@ module.exports = (schema) => {
 
         await this.addDiscordRole(server.role);
         await this.save();
+
+        this.model('Player').events.emit('player_joined_server', this);
     }
 
     schema.methods.changeDiscordNickname = async function (name, reason) {

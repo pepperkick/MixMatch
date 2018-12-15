@@ -431,9 +431,35 @@ describe("RCON", async function () {
     it("should get response from server plugin", async function () {
         for (const name in config.servers) {
             try {            
-                const version = await this.conns[name].send("cc_version");
+                const version = await this.conns[name].send("mx_version");
 
-                assert(version.includes(config.plugin.version, "Could not get response from plugin"));
+                assert(version, "Could not get response from plugin in server ${name}");
+                assert(version.includes(config.plugin.version), `Plugin in server ${name} is outdated`);
+            } catch (error) {
+                assert.fail(error);
+            }
+        }
+    });
+
+    it("should have required maps in server", async function () {
+        this.timeout(30000);
+
+        for (const name in config.servers) {
+            try {            
+                const formats = config.servers[name].formats;
+
+                for (const i in formats) {
+                    const format = config.servers[name].formats[i];
+                    const format_cfg = config.formats[config.servers[name].formats[i]];
+                    const maps = format_cfg.maps;
+
+                    for (const j in maps) {
+                        const map = maps[j];
+                        const result = await this.conns[name].send(`maps ${map}`);
+
+                        assert(result.includes(map), `Could not find map '${map}' in server ${name} for format ${config.servers[name].formats[i]}`);
+                    }
+                }
             } catch (error) {
                 assert.fail(error);
             }

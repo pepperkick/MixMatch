@@ -31,7 +31,8 @@ module.exports = async (app) => {
     });
 
     Command.Register({ 
-        command: 'reset_servers'
+        command: 'reset_servers',
+        role: [ app.config.discord.roles.admin ]
     }, async (args) => {
         const servers_db = await Server.find();
         for (let server of servers_db) {
@@ -47,6 +48,7 @@ module.exports = async (app) => {
     checkPlayers();
 
     Player.events.on("new", onNewPlayer);
+    Player.events.on("player_left_server", onPlayerLeftServer);
     Server.events.on("update", onServerUpdate);
 
     async function checkServers() {
@@ -78,6 +80,8 @@ module.exports = async (app) => {
     }
 
     async function onServerUpdate(server) {
+        const format = app.config.formats[server.format];
+        
         if (server.status === Server.status.UNKNOWN) {
             try {
                 server.conn = await createRconConnection(server.ip, server.port, server.rcon);
@@ -85,12 +89,20 @@ module.exports = async (app) => {
                 log(`${server.name} RCON connected`);
         
                 if (await checkPluginVersion(server)) {        
-                    const server_status = await server.sendRconCommand("cc_getstatus");
+                    const server_status = await server.sendRconCommand("mx_getstatus");
 
                     if (server_status.includes("setup")) {
                         await server.setStatus(Server.status.SETUP);
+
+                        await server.sendRconCommand(`mx_init ${app.config.host} ${app.config.port} ${server.name}`);
                     } else {
                         await server.setStatus(Server.status.FREE);
+
+                        await server.sendRconCommand(`mx_init ${app.config.host} ${app.config.port} ${server.name}`);
+                        await server.sendRconCommand(`mx_teamsize ${format.size}`);
+                        await server.sendRconCommand(`mx_setformat ${server.format}`);
+                        await server.sendRconCommand(`mx_restrict_players 1`);
+
                     }
                 } else {
                     log(`Server plugin version does not match with ${app.config.plugin.version}`);
@@ -101,16 +113,14 @@ module.exports = async (app) => {
                 log(error);
                 log(`${server.name} RCON disconnected`);
 
-                setInterval(async () => await server.setStatus(Server.status.UNKNOWN), 10000);
+                setTimeout(async () => await server.setStatus(Server.status.UNKNOWN), 10000);
             }
         } else if (server.status === Server.status.FREE) {
-            const format = app.config.formats[server.format];
-
             if (server.players.length >= format.size * 2) {        
                 log(`Enough players have joined ${server.name}, switching status to SETUP`);
 
-                await server.sendRconCommand('cc_reset');
-                await server.sendRconCommand(`cc_setstatus ${Server.status.SETUP}`);         
+                await server.sendRconCommand('mx_reset');
+                await server.sendRconCommand(`mx_setstatus ${Server.status.SETUP}`);         
                 await divideTeams(server, format);       
                 await server.setStatus(Server.status.SETUP);
             }
@@ -118,13 +128,20 @@ module.exports = async (app) => {
             if (server.players.length === 0) {
                 await server.setDiscordRoleName(`${server.name}: Empty`);
             } else {
-                await server.setDiscordRoleName(`${server.name}: Waiting (${server.players.length}/${format.size * 2})`);
+                await server.setDiscordRoleName(`${server.name}: Queuing (${server.players.length}/${format.size * 2})`);
             }
         } else if (server.status === Server.status.SETUP) {
             await server.setDiscordRoleName(`${server.name}: Setting Up`);
+            await server.sendRconCommand(`mx_setmap ${map}`);
+
         }
 
         registerCommands(server);
+    }
+
+    async function onPlayerLeftServer(player) {
+        await player.removeDiscordRole(app.config.teams.A.role);
+        await player.removeDiscordRole(app.config.teams.B.role);
     }
 
     async function onNewPlayer(user) {
@@ -414,12 +431,14 @@ module.exports = async (app) => {
             const member = await Discord.getMember(app.config.discord.guild, player.discord);
 
             if (i % 2 === 0) {
+                await player.addDiscordRole(app.config.teams.A.role);
                 server.teamA.push(player.id);
             } else {
+                await player.addDiscordRole(app.config.teams.B.role);
                 server.teamB.push(player.id);
             }
             
-            await server.sendRconCommand(`cc_addplayer ${player.steam} ${i%2} ${member.user.username}`);
+            await server.sendRconCommand(`mx_addplayer ${player.steam} ${i%2} ${member.user.username}`);
         }
     }
 
@@ -430,7 +449,7 @@ module.exports = async (app) => {
     }
 
     async function checkPluginVersion(server) {
-        let version = await server.sendRconCommand('cc_version');
+        let version = await server.sendRconCommand('mx_version');
     
         return version.includes(app.config.plugin.version);
     }

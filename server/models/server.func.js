@@ -16,7 +16,7 @@ module.exports = (schema) => {
     let conns = {};
     let channels = {};
     let roles = {};
-    let flags = {};
+    let prefs = {};
 
     schema.add({
         status: {
@@ -65,13 +65,13 @@ module.exports = (schema) => {
     });
 
     schema.virtual("commands_status").set(function (state) {
-        if (!flags[this.id]) flags[this.id] = {};
+        if (!prefs[this.id]) prefs[this.id] = {};
 
-        flags[this.id].command_status = state;
+        prefs[this.id].command_status = state;
     });
 
     schema.virtual("commands_status").get(function () {
-        return (flags[this.id] && flags[this.id].command_status) || 'unknown';
+        return (prefs[this.id] && prefs[this.id].command_status) || 'unknown';
     });
 
     schema.statics.status = statuses;
@@ -168,7 +168,7 @@ module.exports = (schema) => {
         this.teamB = [];
 
         await this.setStatus(statuses.FREE);
-        await this.sendRconCommand("cc_reset");
+        await this.sendRconCommand("mx_reset");
     }
 
     schema.methods.changeFormat = async function (format) {
