@@ -12,16 +12,16 @@ module.exports = (app) => {
 
         try {
             if (!name) {
-                throw new Error('No Queue name were given');
+                throw new Error('No queue name were given');
             }
     
-            const Queue = await Queue.findByName(name);
+            const queue = await Queue.findByName(name);
     
-            if (!Queue) {
-                throw new Error(`No Queue were found with name '${name}'`);
+            if (!queue) {
+                throw new Error(`No queues were found with name '${name}'`);
             }
 
-            req.Queue = Queue;
+            req.queue = queue;
 
             next();
         } catch (error) {
@@ -39,12 +39,12 @@ module.exports = (app) => {
                 throw new Error('No Queue status were given');
             }
 
-            log(`API Call for status_change: ${name} ${status}`);
+            log(`API Call for status_change: ${req.queue.name} ${status}`);
             
-            if (req.Queue.status === Queue.status.SETUP && status === Queue.status.WAITING) {
-                log(`Setup for Queue ${req.Queue.name} is done!`);
+            if (req.queue.status === Queue.status.SETUP && status === Queue.status.WAITING) {
+                log(`Setup for Queue ${req.queue.name} is done!`);
         
-                await req.Queue.setStatus(status);
+                await req.queue.setStatus(status);
             }
     
             res.sendStatus(200);
@@ -65,8 +65,10 @@ module.exports = (app) => {
 
             const player = await Player.findBySteam(id);
 
-            app.emit("Queue_player_connected", {
-                Queue: req.Queue,
+            log(`API Call for player_connected: ${req.queue.name} ${name}`);
+
+            app.emit("server_player_connected", {
+                queue: req.queue,
                 player
             });
 
