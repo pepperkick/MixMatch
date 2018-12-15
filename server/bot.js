@@ -131,6 +131,8 @@ module.exports = async (app) => {
                 await server.setDiscordRoleName(`${server.name}: Queuing (${server.players.length}/${format.size * 2})`);
             }
         } else if (server.status === Server.status.SETUP) {
+            const map = format.maps[Math.floor(Math.random() * format.maps.length)];           
+
             await server.setDiscordRoleName(`${server.name}: Setting Up`);
             await server.sendRconCommand(`mx_setmap ${map}`);
 
