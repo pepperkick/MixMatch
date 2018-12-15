@@ -14,6 +14,7 @@ module.exports = {
         channel: String,
         format: String,
         role: String,
+        map: String,
         players: [{
             type: mongoose.Schema.Types.ObjectId,
             ref: "Player"

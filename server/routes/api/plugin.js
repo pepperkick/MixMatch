@@ -65,7 +65,7 @@ module.exports = (app) => {
 
             const player = await Player.findBySteam(id);
 
-            log(`API Call for player_connected: ${req.queue.name} ${name}`);
+            log(`API Call for player_connected: ${req.queue.name} ${id}`);
 
             app.emit("server_player_connected", {
                 queue: req.queue,

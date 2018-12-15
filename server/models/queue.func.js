@@ -171,6 +171,8 @@ module.exports = (schema) => {
 
         this.teamA = [];
         this.teamB = [];
+
+        await this.save();
     }
 
     schema.methods.changeFormat = async function (format) {

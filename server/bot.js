@@ -11,15 +11,13 @@ module.exports = async (app) => {
     const Command = app.object.command;
     const Discord = app.discord;
 
-    Command.Register({ 
-        command: 'ping'
-    }, (args) => {
+    registerCommand({ command: 'ping' }, 
+    (args) => {
         args.message.reply("Pong!");
     });
 
-    Command.Register({ 
-        command: 'register'
-    }, async (args) => {
+    registerCommand({ command: 'register' }, 
+    async (args) => {
         const player = await Player.findByDiscord(args.message.author.id);
 
         if (player) {
@@ -29,10 +27,8 @@ module.exports = async (app) => {
         }
     });
 
-    Command.Register({ 
-        command: 'reset_queues',
-        role: [ app.config.discord.roles.admin ]
-    }, async (args) => {
+    registerCommand({ command: 'reset_queues', role: [ app.config.discord.roles.admin ] }, 
+    async (args) => {
         const servers_db = await Queue.find();
         for (let Queue of servers_db) {
             await Queue.remove();
@@ -101,8 +97,8 @@ module.exports = async (app) => {
                         await queue.setStatus(Queue.status.FREE);
 
                         await queue.sendRconCommand(`mx_reset`);
-                        await queue.sendRconCommand(`mx_teamsize ${format.size}`);
                         await queue.sendRconCommand(`mx_set_format ${queue.format}`);
+                        await queue.sendRconCommand(`mx_set_size ${format.size}`);
                         await queue.sendRconCommand(`mx_restrict_players 1`);
                     }
                 } else {
@@ -120,9 +116,9 @@ module.exports = async (app) => {
             if (queue.players.length >= format.size * 2) {        
                 log(`Enough players have joined ${queue.name}, switching status to SETUP`);
 
-                await divideTeams(queue, format);       
                 await queue.sendRconCommand('mx_reset');
-                await queue.sendRconCommand(`mx_set_status ${Queue.status.SETUP}`);         
+                await queue.sendRconCommand(`mx_set_status ${Queue.status.SETUP}`);     
+                await divideTeams(queue, format);          
                 await queue.setStatus(Queue.status.SETUP);
             }
 
@@ -136,9 +132,9 @@ module.exports = async (app) => {
                 log(`Failed to set role name for Queue ${queue.name}`, error);
             }
         } else if (queue.status === Queue.status.SETUP) {
-            const map = format.maps[Math.floor(Math.random() * format.maps.length)];     
+            queue.map = format.maps[Math.floor(Math.random() * format.maps.length)];
             
-            log(`Setting up ${queue.name} for ${queue.format} with map ${map}`);
+            log(`Setting up ${queue.name} for ${queue.format} with map ${queue.map}`);
 
             await queue.sendRconCommand(`mx_set_map ${map}`);
             await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
@@ -147,17 +143,22 @@ module.exports = async (app) => {
 
             await queue.setDiscordRoleName(`${queue.name}: Waiting (0/${format.size * 2})`);
             await queue.sendDiscordMessage({ embed: {
-                    color: 0x00BCD4,                            
-                    title: 'Server is Ready',
-                    description: `Join the server!`,
-                    fields: [
-                        {
-                            name: "Connect",
-                            value: `steam://connect/${queue.ip}:${queue.port}`,
-                            inline: false
-                        }
-                    ],
-                    timestamp: new Date()
+                color: 0x00BCD4,                            
+                title: 'Server is Ready',
+                description: `Join the server!`,
+                fields: [
+                    {
+                        name: "Connect",
+                        value: `steam://connect/${queue.ip}:${queue.port}`,
+                        inline: false
+                    },
+                    {
+                        name: "Map",
+                        value: queue.map,
+                        inline: false
+                    }
+                ],
+                timestamp: new Date()
             }});
         }
 
@@ -207,7 +208,7 @@ module.exports = async (app) => {
         else queue.commands_status = queue.status;
 
         if (queue.status === Queue.status.FREE) {
-            Command.Register({ 
+            registerCommand({ 
                 command: 'join',
                 channel: queue.channel,
                 role: [ app.config.discord.roles.player ]
@@ -215,7 +216,7 @@ module.exports = async (app) => {
                 await addPlayerQueue(args, queue, args.message.author.id)
             });
 
-            Command.Register({ 
+            registerCommand({ 
                 command: 'leave',
                 channel: queue.channel,
                 role: [ app.config.discord.roles.player ]
@@ -223,7 +224,7 @@ module.exports = async (app) => {
                 await removePlayerQueue(args, queue, args.message.author.id)
             });
 
-            Command.Register({ 
+            registerCommand({ 
                 command: 'format',
                 channel: queue.channel,
                 role: [ app.config.discord.roles.admin ]
@@ -232,7 +233,7 @@ module.exports = async (app) => {
             });
         }
     
-        Command.Register({ 
+        registerCommand({ 
             command: 'reset',
             channel: queue.channel,
             role: [ app.config.discord.roles.admin ]
@@ -240,7 +241,7 @@ module.exports = async (app) => {
             await resetQueue(args, queue)
         });
 
-        Command.Register({ 
+        registerCommand({ 
             command: 'status',
             channel: queue.channel,
             role: [ app.config.discord.roles.player ]
@@ -394,11 +395,23 @@ module.exports = async (app) => {
                     value: `${queue.players.length} / ${app.config.formats[format].size * 2}`,
                     inline: true
                 });
-            } else if (queue.status === Queue.status.SETUP || queue.status === Queue.status.WAITING) {
+            } else if (queue.status === Queue.status.SETUP) {
                 fields.push({
                     name: 'Format',
                     value: format
                 });        
+            } else if (queue.status === Queue.status.WAITING) {
+                fields.push({
+                    name: 'Format',
+                    value: format,
+                    inline: true
+                });     
+
+                fields.push({
+                    name: 'Map',
+                    value: queue.map,
+                    inline: true
+                });   
             }
 
             if (queue.status === Queue.status.FREE) {
@@ -485,6 +498,18 @@ module.exports = async (app) => {
             }
             
             await queue.sendRconCommand(`mx_add_player ${player.steam} ${i%2} ${member.user.username}`);
+        }
+    }
+
+    async function registerCommand(options, handler) {
+        try {
+            await Command.Register(options, handler);
+        } catch (error) {
+            if (error.code === "CMD_ALREADY_EXISTS") {
+                log(`The command ${options.command} already exists for channel ${options.channel}`);
+            } else {
+                throw error;
+            }
         }
     }
 

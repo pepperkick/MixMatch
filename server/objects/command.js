@@ -1,5 +1,7 @@
 const debug = require('debug');
 
+const Exception = require("./exception");
+
 const log = debug("app:object:command");
 const Commands = [];
 
@@ -58,7 +60,7 @@ module.exports = class {
         const command_prev = this.Search(parameters);
 
         if (command_prev) {
-            throw new Error(`Command "${parameters.command}" is already registered`);
+            throw new Exception("CMD_ALREADY_EXISTS", `Command "${parameters.command}" is already registered`);
         }
   
         const command = new this(parameters.command, callback);
