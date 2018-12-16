@@ -20,14 +20,14 @@ stock PrintToMinHudAll(const String:szMessage[], any:...) {
 stock PrintToMinHud(client, const String:msg[], any:...) {
 	VFormat(minhudBuffer, sizeof(minhudBuffer), msg, 3);
 
-    if (!IsClientValid(client)) {
+	if (!IsClientValid(client)) {
 	    QueryClientConVar(client, "cl_hud_minmode", ConVarQuery_MinMode);
     }
 }
 
 public void ConVarQuery_MinMode(QueryCookie cookie, int client,
 	ConVarQueryResult result, const char[] cvarName, const char[] cvarValue) {
-	DebugLog("[HUD] Client %d has minmode %d", client, StringToInt(cvarValue));
+	Log("[HUD] Client %d has minmode %d", client, StringToInt(cvarValue));
 	if (StringToInt(cvarValue) == 0) {
 		new entity = CreateEntityByName("game_text_tf");
 		DispatchKeyValue(entity, "message", minhudBuffer);

@@ -26,6 +26,8 @@ public void Game_OnPlayerConnectPost(int client) {
     SendRequest("player_connected", parameters);
 
     ShowVGUIPanel(client, PANEL_CLASS_RED);
+
+    PostStatusUpdate();
 }
 
 public Action GameCommand_JoinTeam(int client, const char[] command, int argc) {
@@ -33,28 +35,32 @@ public Action GameCommand_JoinTeam(int client, const char[] command, int argc) {
 }
 
 StartMatch() {
-    DebugLog("Match Started");
+    Log("Match Started");
 
     if (GetStatus() == STATE_WAITING) {
-        StringMap parameters = new StringMap();
-        parameters.SetString("status", "live");
-
-        SendRequest("status_change", parameters);
-
         SetStatus(STATE_LIVE);
+
+        PrintToMinHudAll("Match is now live, Good Luck!");
     }
 }
 
 ResetMatch() {
-    DebugLog("Match Reset");
+    Log("Match Reset");
 }
 
 EndMatch(bool:endedMidgame) {
-    DebugLog("Match Ended: %d", endedMidgame);
+    Log("Match Ended: %d", endedMidgame);
 
     if (GetStatus() == STATE_LIVE) {
         SetStatus(STATE_END);
     }
 
     CreateTimer(30 * 1.0, Timer_PostMatchCoolDown);
+}
+
+PostStatusUpdate() {
+    int players = CountPlayersInAnyTeam();
+    int max_players = ServerTeamSize * 2;
+
+    PrintToMinHudAll("Waiting for players to join (%s / %s)", players, max_players);
 }

@@ -1,4 +1,4 @@
-#define PLUGIN_VERSION  "1.0.1"
+#define PLUGIN_VERSION  "1.0.2"
 #define UPDATE_URL      ""
 #define TAG             "MIX"
 #define COLOR_TAG       "{matAmber}"
@@ -7,6 +7,7 @@
 #define DEBUG_TAG       "MIX"
 #define MAX_RETRIES     3
 #define RETRY_INTERVAL  3
+#define CONFIG_DIR      "mixmatch"
 #define GAME_TF2
 
 public Plugin:myinfo = {
@@ -21,15 +22,18 @@ char HostIP[128];
 char HostPort[8];
 char ServerName[16];
 char ServerFormat[16];
+int ServerTeamSize;
 
 ArrayList PlayerSteam;
 StringMap PlayerName;
 StringMap PlayerTeam;
 
+Handle g_hoHud = INVALID_HANDLE;    //Handle for HUD text display
+
 #include <headers>  
 
 public OnPluginStart() {
-    DebugLog("Loaded Version: %s", PLUGIN_VERSION);
+    Log("Loaded Version: %s", PLUGIN_VERSION);
 
     CreateCvars();
     
@@ -37,12 +41,16 @@ public OnPluginStart() {
     PlayerName = new StringMap();
     PlayerTeam = new StringMap();
 
+    // Attach HUD
+    g_hoHud = HudInit(127, 255, 127);
+
     RegConsoleCmd("mx_init", Command_Init);
     RegConsoleCmd("mx_reset", Command_Reset); 
     RegConsoleCmd("mx_list_players", Command_ListPlayers);  
     RegConsoleCmd("mx_add_player", Command_AddPlayer);  
     RegConsoleCmd("mx_set_map", Command_SetMap);    
     RegConsoleCmd("mx_set_format", Command_SetFormat); 
+    RegConsoleCmd("mx_set_size", Command_SetSize); 
     RegConsoleCmd("mx_get_status", Command_GetStatus);  
     RegConsoleCmd("mx_set_status", Command_SetStatus);  
     RegConsoleCmd("mx_version", Command_Version);
@@ -58,7 +66,7 @@ public OnPluginStart() {
 
 public void OnClientAuthorized(int client) {
     if (IsClientSourceTV(client)) {
-        DebugLog("Client is SourceTV, Ignoring...");
+        Log("Client is SourceTV, Ignoring...");
         return;
     }
 
@@ -80,7 +88,7 @@ public void OnClientAuthorized(int client) {
            return;
         }
 
-        DebugLog("Player Joined with id %s", steam);
+        Log("Player Joined with id %s", steam);
         Game_OnPlayerConnect(client);
     } else if (GetStatus() == STATE_LIVE) {
         KickClient(client, "Match has already started, you cannot join now");
@@ -101,11 +109,7 @@ public void OnMapStart() {
     if (GetStatus() == STATE_SETUP) {
         SetStatus(STATE_WAITING);
 
-        char map[256];
-
-        GetCurrentMap(map, sizeof(map));
-        ServerCommand("exec mixmatch/maps/%s", map);
-        ServerCommand("exec mixmatch/configs/%s", ServerFormat);
+        ExecutePluginConfigs();
 
         #if defined GAME_CSGO
         ServerCommand("mp_warmuptime 1800");
@@ -119,18 +123,18 @@ public void OnMapStart() {
         ServerCommand("mp_tournament_restart");
         #endif
     } else if (GetStatus() == STATE_WAITING) {
-        DebugLog("Map changed during waiting phase, Ignoring...");
+        Log("Map changed during waiting phase, Ignoring...");
     } else {
         // TODO: Report error if map changes while STATE_LIVE
 
         SetStatus(STATE_FREE);
     }
 
-    DebugLog("Map Started");
+    Log("Map Started");
 }
 
 public void OnMapEnd() {
-    DebugLog("Map Ended");
+    Log("Map Ended");
 
     Game_OnMapEnd();
 }
@@ -147,6 +151,8 @@ public Action Command_Init(int client, int args) {
     Format(ServerName, sizeof(ServerName), "%s", server_name);
 
     PrintToServer("response::ok");
+
+    Log("Plugin initialized with following settings (IP: %s, Porst: %s, Name: %s)", HostIP, HostPort, ServerName);
 
     return Plugin_Continue;
 }
@@ -180,9 +186,9 @@ public Action Command_AddPlayer(int client, int args) {
 
     #if defined GAME_TF2
     if (StrEqual(team, "0", false)) {
-        Format(team, sizeof(team), "%d", TEAM_BLU);
-    } else {
         Format(team, sizeof(team), "%d", TEAM_RED);
+    } else {
+        Format(team, sizeof(team), "%d", TEAM_BLU);
     }
     #endif
 
@@ -203,6 +209,8 @@ public Action Command_SetMap(int client, int args) {
 
     PrintToServer("response::ok");
 
+    Log("Sent command to change server map to %d", map);
+
     return Plugin_Continue;
 }
 
@@ -213,7 +221,23 @@ public Action Command_SetFormat(int client, int args) {
 
     Format(ServerFormat, sizeof(ServerFormat), "%s", format);
 
-    PrintToServer("response::%s", format);
+    PrintToServer("response::ok::%s", format);
+
+    Log("Changed server format to %d", ServerFormat);
+
+    return Plugin_Continue;
+}
+
+public Action Command_SetSize(int client, int args) {
+    char size[2];
+    
+    GetCmdArg(1, size, sizeof(size));
+
+    ServerTeamSize = StringToInt(size, 10);
+
+    PrintToServer("response::ok::%s", size);
+
+    Log("Changed server team size to %d", ServerTeamSize);
 
     return Plugin_Continue;
 }
@@ -270,7 +294,7 @@ public Action Command_ListPlayers(int client, int args) {
         PlayerName.GetString(steam, name, sizeof(name));
         PlayerTeam.GetString(steam, team, sizeof(team));
 
-        PrintToServer("%s %s %", steam, name, team)
+        PrintToServer("%s %s %s", steam, name, team)
     }
 }
 
@@ -306,7 +330,7 @@ public Action:Timer_PostMatchCoolDown(Handle timer) {
 }
 
 public void SetStatus(int status) {
-    DebugLog("Setting status to %d", status);
+    Log("Setting status to %d", status);
 
     char SeverStatus[32];
 
@@ -375,18 +399,33 @@ public void SendRequest(char[] type, StringMap parameters) {
 
     req.SendRequest();
 
-    DebugLog("Sending request %s", type);
+    Log("Sending request %s", type);
 }
 
 public void OnRequestComplete(bool bSuccess, int iStatusCode, StringMap tHeaders, const char[] sBody, int iErrorType, int iErrorNum, any data) {
     if (bSuccess) {
-        DebugLog("Finished request with status code %d", iStatusCode);
+        Log("Finished request with status code %d", iStatusCode);
     } else {
-        DebugLog("Failed request with error type %d, error num %d", iErrorType, iErrorNum);
+        Log("Failed request with error type %d, error num %d", iErrorType, iErrorNum);
     }
 }
 
-public DebugLog(const char[] myString, any ...) {
+public void ExecutePluginConfigs() {
+    char map[256];
+
+    GetCurrentMap(map, sizeof(map));
+    
+    new String:prefix[8];
+    SplitString(map, "_", prefix, 8)
+
+    ServerCommand("exec %/maps/%s", CONFIG_DIR, prefix);
+    ServerCommand("exec %/maps/%s", CONFIG_DIR, map);
+    ServerCommand("exec %s/maps/%s-%s", CONFIG_DIR, map, ServerFormat);
+    ServerCommand("exec %s/configs/%s", CONFIG_DIR, ServerFormat);
+    ServerCommand("exec %s/configs/%s-%s", CONFIG_DIR, ServerFormat, prefix);
+}
+
+public Log(const char[] myString, any ...) {
     #if defined DEBUG
         int len = strlen(myString) + 255;
         char[] myFormattedString = new char[len];

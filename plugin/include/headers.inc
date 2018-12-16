@@ -2,14 +2,16 @@
 #define TEAM_NIL 0
 #define TEAM_RED 2
 #define TEAM_BLU 3
+#define TEAM_SPC 4
 
 #define PANEL_CLASS_RED "class_red"
 #define PANEL_CLASS_BLU "class_blue"
 #endif
 
 #if defined GAME_CSGO
-#define TEAM_T  2
-#define TEAM_CT 3
+#define TEAM_T   2
+#define TEAM_CT  3
+#define TEAM_SPC 4
 #endif
 
 #define STATE_UNKNOWN   0
@@ -25,9 +27,14 @@
 #include <sdktools>
 #include <httpreq>
 
+#include <libs/hud>
+
 #include <cvars>
+#include <player>
 
 #if defined GAME_TF2
+#include <libs/minhud>
+
 #include <match>
 #include <games/tf2>
 #endif

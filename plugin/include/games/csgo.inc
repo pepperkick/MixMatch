@@ -17,9 +17,9 @@ public void Game_OnPlayerConnect(int client) {
 
     playerCount++;
 
-    DebugLog("%d: %d", playerCount, GetConVarInt(g_hcTeamSize));
+    Log("%d: %d", playerCount, ServerTeamSize);
 
-    if (playerCount >= GetConVarInt(g_hcTeamSize) * 2) {
+    if (playerCount >= ServerTeamSize * 2) {
         ServerCommand("mp_warmuptime 15");
         ServerCommand("mp_warmup_start");
         ServerCommand("bot_kick all");
@@ -48,7 +48,7 @@ public void Game_OnPlayerConnectPost(int client) {
 }
 
 public Action Event_GameOver(Event event, const char[] name, bool dontBroadcast) {
-    DebugLog("Match Ended");
+    Log("Match Ended");
 
     if (GetStatus() == STATE_LIVE) {
         SetStatus(STATE_END);
@@ -60,7 +60,7 @@ public Action Event_GameOver(Event event, const char[] name, bool dontBroadcast)
 }
 
 public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
-    DebugLog("Round Started");
+    Log("Round Started");
 
     if (GetStatus() == STATE_WAITING) {
         dummyRound++;
