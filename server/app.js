@@ -41,7 +41,13 @@ module.exports.init = async() => {
     });
 
     process.on('unhandledRejection', async (reason, promise) => {
-        log('Caught Rejection: ', promise, "Reason", reason.message);
+        log('Caught Rejection: ', promise, "Reason: ", reason.message);
+
+        if (reason.message.includes("Response timeout for packet id")) {
+            log("RCON Error", reason.message);
+
+            app.connection.model("Queue").disconnectAllRconConnection();
+        }
 
         // await generateErrorReport({
         //     type: "Uncaught Rejection",

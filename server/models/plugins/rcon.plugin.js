@@ -1,6 +1,6 @@
 module.exports = (schema, options) => {
     const app = options.app;
-    const cache = {};
+    let cache = {};
 
     schema.methods.createRconConnection = async function () {
         let ip = this.ip || this[options.ip];
@@ -31,13 +31,29 @@ module.exports = (schema, options) => {
     }
     
     schema.methods.retryRconConnection = async function () {
-        this.rconConn = await this.createRconConnection();
-        this.model(this.constructor.modelName).emit("rcon_connected", this);
+        try {
+            this.rconConn = await this.createRconConnection();
+            this.model(this.constructor.modelName).emit("rcon_connected", this);
+        } catch (error) {
+            this.model(this.constructor.modelName).emit("rcon_error", this);
+        }
     };
 
     schema.methods.getRconConnection = function () {
         return cache[`${this.ip}:${this.port}`];
     };
+
+    schema.methods.disconnectRconConnection = async function () {
+        await cache[`${this.ip}:${this.port}`].disconnect();
+    }
+
+    schema.statics.disconnectAllRconConnection = async function () {
+        for (const key in cache) {
+            await cache[key].disconnect();
+        }
+
+        cache = {};
+    }
 
     schema.post('init', async doc => {
         try {

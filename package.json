@@ -20,7 +20,7 @@
   "license": "ISC",
   "dependencies": {
     "@abskmj/mongen": "github:abskmj/mongen#ec2eee18bc0b9f8a90731c0df19a6686587621d7",
-    "@abskmj/mongoose-plugin-timestamps": "github:abskmj/mongoose-plugin-timestamps#ed15406f03236caa59153c76511886ec2a782e97",
+    "@abskmj/mongoose-plugin-timestamps": "github:abskmj/mongoose-plugin-timestamps#3cfc5c46f4e2dfe732a67a499af9cff596f1e918",
     "@abskmj/servgen": "github:abskmj/servgen#8646396359a0790c059035d5cee937cebb513e41",
     "async-request": "^1.2.0",
     "async-sleep": "^0.1.0",

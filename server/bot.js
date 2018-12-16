@@ -175,10 +175,12 @@ module.exports = async (app) => {
     }
     
     async function onQueueRconDisconnected(queue) {
+        log(`${queue.name} RCON Disconnected Event`);
         setTimeout(async () => await queue.retryRconConnection(), 10000);
     }
 
     async function onQueueRconError(queue) {
+        log(`${queue.name} RCON Error Event`);
         setTimeout(async () => await queue.retryRconConnection(), 10000);
     }
 
@@ -510,10 +512,10 @@ module.exports = async (app) => {
             const player = await Player.findById(queue.players.pop());
 
             if (i % 2 === 0) {
-                await player.getDiscordMember().adddRole(app.config.teams.A.role);
+                await player.getDiscordMember().addRole(app.config.teams.A.role);
                 queue.teamA.push(player.id);
             } else {
-                await player.getDiscordMember().adddRole(app.config.teams.B.role);
+                await player.getDiscordMember().addRole(app.config.teams.B.role);
                 queue.teamB.push(player.id);
             }
             
@@ -535,7 +537,6 @@ module.exports = async (app) => {
 
     async function checkPluginVersion(queue) {
         let version = await queue.sendRconCommand('mx_version');
-    
         return version.includes(app.config.plugin.version);
     }
 };
