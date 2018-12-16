@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 module.exports = {
     name: "Player",
     plugins: {
-        timestamps: true,
+        "@abskmj/mongoose-plugin-timestamps": true,
         events: true,
     },
     schema: {
