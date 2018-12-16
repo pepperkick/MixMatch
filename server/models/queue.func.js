@@ -153,7 +153,7 @@ module.exports = (schema) => {
         return true;
     }
     
-    schema.methods.removeAllPlayers = async function () {
+    schema.methods.reset = async function () {
         await this.setStatus(statuses.FREE);
         await this.sendRconCommand("mx_reset");
 

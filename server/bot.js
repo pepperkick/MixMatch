@@ -161,6 +161,12 @@ module.exports = async (app) => {
                 ],
                 timestamp: new Date()
             }});
+        } else if (queue.status === Queue.status.LIVE) {
+            await queue.setDiscordRoleName(`${queue.name}: Live`);
+        } else if (queue.status === Queue.status.ENDED) {
+            await queue.setDiscordRoleName(`${queue.name}: End Game`);
+            
+            setTimeout(() => await queue.reset(), 10000);
         }
 
         registerCommands(queue);
@@ -382,6 +388,11 @@ module.exports = async (app) => {
                     value: `steam://connect/${queue.ip}:${queue.port}`,
                     inline: false
                 });
+            } else if (queue.status === Queue.status.LIVE) {
+                fields.push({
+                    name: 'Status',
+                    value: 'Match is currently live'
+                });
             }
 
             if (queue.status === Queue.status.FREE) {
@@ -401,7 +412,7 @@ module.exports = async (app) => {
                     name: 'Format',
                     value: format
                 });        
-            } else if (queue.status === Queue.status.WAITING) {
+            } else if (queue.status === Queue.status.WAITING || queue.status === Queue.status.LIVE) {
                 fields.push({
                     name: 'Format',
                     value: format,
@@ -436,7 +447,7 @@ module.exports = async (app) => {
                         value: players
                     });
                 }
-            } else if (queue.status === Queue.status.SETUP || queue.status === Queue.status.WAITING) {
+            } else if (queue.status === Queue.status.SETUP || queue.status === Queue.status.WAITING || queue.status === Queue.status.LIVE) {
                 let players_teamA = '';
                 let players_teamB = '';
 
@@ -476,7 +487,7 @@ module.exports = async (app) => {
 
     async function resetQueue(args, queue) {
         try {
-            await queue.removeAllPlayers();
+            await queue.reset();
 
             await args.message.reply(`Successfully cleared the queue.`);
         } catch (error) {

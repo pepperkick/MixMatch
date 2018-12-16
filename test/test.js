@@ -340,7 +340,7 @@ describe("Database", async function () {
             
     //         assert(this.Queue.players.length === 2, "Players array length did not set to 2");
 
-    //         await this.Queue.removeAllPlayers();
+    //         await this.Queue.reset();
 
     //         assert(this.Queue.players.length === 0, "Players array length did not set to 0");
     //     } catch (error) {
@@ -364,7 +364,7 @@ describe("Database", async function () {
 
     //         assert(this.Queue.format === "6v6", "Queue format changed from 6v6");
 
-    //         await this.Queue.removeAllPlayers();
+    //         await this.Queue.reset();
     //     } catch (error) {
     //         if (error.code) {
     //             if (error.code === "ERR_ASSERTION") 

@@ -42,7 +42,19 @@ module.exports = (app) => {
             log(`API Call for status_change: ${req.queue.name} ${status}`);
             
             if (req.queue.status === Queue.status.SETUP && status === Queue.status.WAITING) {
-                log(`Setup for Queue ${req.queue.name} is done!`);
+                log(`Setup for server ${req.queue.name} is done.`);
+        
+                await req.queue.setStatus(status);
+            } else if (req.queue.status === Queue.status.WAITING && status === Queue.status.LIVE) {
+                log(`Server ${req.queue.name} is now live.`);
+        
+                await req.queue.setStatus(status);
+            } else if (req.queue.status === Queue.status.LIVE && status === Queue.status.ENDED) {
+                log(`Match in server ${req.queue.name} has ended.`);
+        
+                await req.queue.setStatus(status);
+            } else if (req.queue.status === Queue.status.ENDED && status === Queue.status.FREE) {
+                log(`Server ${req.queue.name} is now free.`);
         
                 await req.queue.setStatus(status);
             }
