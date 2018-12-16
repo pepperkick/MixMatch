@@ -1,4 +1,4 @@
-#define PLUGIN_VERSION  "1.0.2"
+#define PLUGIN_VERSION  "1.0.3"
 #define UPDATE_URL      ""
 #define TAG             "MIX"
 #define COLOR_TAG       "{matAmber}"

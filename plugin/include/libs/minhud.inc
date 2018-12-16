@@ -20,6 +20,8 @@ stock PrintToMinHudAll(const String:szMessage[], any:...) {
 stock PrintToMinHud(client, const String:msg[], any:...) {
 	VFormat(minhudBuffer, sizeof(minhudBuffer), msg, 3);
 
+	if (!IsClientInAnyTeam(client)) return;
+
 	if (!IsClientValid(client)) {
 	    QueryClientConVar(client, "cl_hud_minmode", ConVarQuery_MinMode);
     }
