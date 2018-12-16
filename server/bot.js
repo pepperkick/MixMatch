@@ -166,7 +166,7 @@ module.exports = async (app) => {
         } else if (queue.status === Queue.status.ENDED) {
             await queue.setDiscordRoleName(`${queue.name}: End Game`);
             
-            setTimeout(() => await queue.reset(), 10000);
+            setTimeout(async () => await queue.reset(), 10000);
         }
 
         registerCommands(queue);
