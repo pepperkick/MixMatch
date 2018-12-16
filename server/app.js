@@ -28,5 +28,70 @@ module.exports.init = async() => {
     
     log('application listening on port', app.config.port);
 
+    
+    process.on('uncaughtException',  async (error) => {
+        log('Caught exception: ', error, error.stack);
+        
+        await generateErrorReport({
+            type: "Uncaught Exception",
+            error
+        });
+
+        process.exit(9);
+    });
+
+    process.on('unhandledRejection', async (reason, promise) => {
+        log('Caught Rejection: ', promise, "Reason", reason.message);
+
+        // await generateErrorReport({
+        //     type: "Uncaught Rejection",
+        //     promise: JSON.stringify(promise),
+        //     reason
+        // });
+    });
+
+    async function generateErrorReport(parameters) {
+        const ReferenceNumber = Math.floor(Math.random() * (10000 - 0) + 0);
+        
+        try {
+            const config = app.config.discord;
+            const errorChannel = config.channels.error;
+            const channel = await app.discord.bot.channels.get(errorChannel);
+            const fields = [];
+            
+            if (!channel) {
+                throw new Error(`Unable to find error log channel with id ${errorChannel}`);
+            }
+            
+            for (let name in parameters) {
+                fields.push({
+                    name,
+                    value: parameters[name],
+                    inline: true
+                })
+            }
+            
+            await channel.send('', {
+                embed: {
+                    color: 0xf44336,
+                    title: `Error Report`,
+                    description: `Reference Number: #${ReferenceNumber}`,
+                    fields,
+                    timestamp: new Date()
+                }
+            });
+        } catch (error) {
+            log(`${error}`);
+            log(`============== ERROR REPORT #${ReferenceNumber} ================`);
+            for (let name in parameters) {
+                log(`${name}:\t${parameters[name]}`);
+            }
+            log("Date:\t", new Date());
+            log(`============== REPORT END #${ReferenceNumber}  =================`);
+        }
+        
+        return ReferenceNumber;
+    };
+
     return app;
 }

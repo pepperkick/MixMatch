@@ -1,9 +1,9 @@
 const debug = require('debug');
-const Rcon = require('rcon-client').Rcon;
 
 const Exception = require("./objects/exception");
 
 const log = debug("app:bot");
+const prefs = {};
 
 module.exports = async (app) => {
     const Queue = app.connection.model("Queue");
@@ -40,11 +40,14 @@ module.exports = async (app) => {
     });
 
     checkQueues();
-    checkPlayers();
 
-    Player.events.on("new", onNewPlayer);
-    Player.events.on("player_left_queue", onPlayerLeftQueue);
-    Queue.events.on("update", onQueueUpdate);
+    Player.on("new", onNewPlayer);
+    Player.on("player_left_queue", onPlayerLeftQueue);
+    Queue.on("init", onQueueInit);
+    Queue.on("update", onQueueUpdate);
+    Queue.on("rcon_connected", onQueueRconConnected);
+    Queue.on("rcon_disconnected", onQueueRconDisconnected);
+    Queue.on("rcon_error", onQueueRconError);
     app.on("server_player_connected", onPlayerConnectedToServer);
 
     async function checkQueues() {
@@ -58,60 +61,18 @@ module.exports = async (app) => {
                 await createNewQueue(name, queue_config);
             }
         }
-    
-        const queues_db = await Queue.find();
-        for (let queue of queues_db) {
-            await queue.setStatus(Queue.status.UNKNOWN);
-
-            queue.discord_channel = await Discord.getGuildChannel(app.config.discord.guild, queue.channel);
-            queue.discord_role = await Discord.getGuildRole(app.config.discord.guild, queue.role);
-        }
     }
 
-    async function checkPlayers() {  
-        const players_db = await Player.find();
-        for (let player of players_db) {
-            player.discord_user = await Discord.getMember(app.config.discord.guild, player.discord);
-        }
+    function onQueueInit(queue) {  
+        if (!prefs[queue.id]) prefs[queue.id] = {}; 
+        registerCommands(queue);
     }
 
     async function onQueueUpdate(queue) {
         const format = app.config.formats[queue.format];
         
         if (queue.status === Queue.status.UNKNOWN) {
-            try {
-                queue.conn = await createRconConnection(queue.ip, queue.port, queue.rcon);
-
-                log(`${queue.name} RCON connected`);
-        
-                if (await checkPluginVersion(queue)) {        
-                    const queue_status = await queue.sendRconCommand("mx_get_status");
-
-                    await queue.sendRconCommand(`mx_init ${app.config.host} ${app.config.port} ${queue.name}`);
-
-                    if (queue_status.includes(Queue.status.SETUP)) {
-                        await queue.setStatus(Queue.status.SETUP);
-                    } else if (queue_status.includes(Queue.status.WAITING)) { 
-                        await queue.setStatus(Queue.status.WAITING);                        
-                    } else {
-                        await queue.setStatus(Queue.status.FREE);
-
-                        await queue.sendRconCommand(`mx_reset`);
-                        await queue.sendRconCommand(`mx_set_format ${queue.format}`);
-                        await queue.sendRconCommand(`mx_set_size ${format.size}`);
-                        await queue.sendRconCommand(`mx_restrict_players 1`);
-                    }
-                } else {
-                    log(`Queue plugin version does not match with ${app.config.plugin.version}`);
-    
-                    await queue.setStatus(Queue.status.OUTDATED);
-                }
-            } catch (error) {
-                log(error);
-                log(`${queue.name} RCON disconnected`);
-
-                setTimeout(async () => await queue.setStatus(Queue.status.UNKNOWN), 10000);
-            }
+            // TODO: ?
         } else if (queue.status === Queue.status.FREE) {
             if (queue.players.length >= format.size * 2) {        
                 log(`Enough players have joined ${queue.name}, switching status to SETUP`);
@@ -164,17 +125,66 @@ module.exports = async (app) => {
         } else if (queue.status === Queue.status.LIVE) {
             await queue.setDiscordRoleName(`${queue.name}: Live`);
         } else if (queue.status === Queue.status.ENDED) {
-            await queue.setDiscordRoleName(`${queue.name}: End Game`);
-            
-            setTimeout(async () => await queue.reset(), 10000);
+            await queue.setDiscordRoleName(`${queue.name}: End Game`);    
+            await queue.sendDiscordMessage({ embed: {
+                color: 0x00BCD4,                            
+                title: 'Match Complete',
+                timestamp: new Date()
+            }});
         }
+    }
 
-        registerCommands(queue);
+    async function onQueueRconConnected(queue) {         
+        log(`${queue.name} RCON Connected Event`);
+
+        if (await checkPluginVersion(queue)) {       
+            log(`${queue.name} plugin is up to date`);
+
+            const format = app.config.formats[queue.format]; 
+            const queue_status = await queue.sendRconCommand("mx_get_status");
+
+            await queue.sendRconCommand(`mx_init ${app.config.host} ${app.config.port} ${queue.name}`);
+
+            if (queue_status.includes(Queue.status.SETUP)) {
+                await queue.setStatus(Queue.status.SETUP);       
+                log(`${queue.name} status set to SETUP`);      
+            } else if (queue_status.includes(Queue.status.WAITING)) { 
+                await queue.setStatus(Queue.status.WAITING);          
+                log(`${queue.name} status set to WAITING`);                        
+            } else if (queue_status.includes(Queue.status.LIVE)) { 
+                await queue.setStatus(Queue.status.LIVE);       
+                log(`${queue.name} status set to LIVE`);                                    
+            } else if (queue_status.includes(Queue.status.ENDED)) { 
+                await queue.setStatus(Queue.status.ENDED);      
+                log(`${queue.name} status set to ENDED`);                           
+            } else {
+                await queue.setStatus(Queue.status.FREE);
+
+                log(`${queue.name} status set to FREE`);
+
+                await queue.sendRconCommand(`mx_reset`);
+                await queue.sendRconCommand(`mx_set_format ${queue.format}`);
+                await queue.sendRconCommand(`mx_set_size ${format.size}`);
+                await queue.sendRconCommand(`mx_restrict_players 1`);
+            }
+        } else {
+            log(`Queue plugin version does not match with ${app.config.plugin.version}`);
+
+            await queue.setStatus(Queue.status.OUTDATED);
+        }
+    }
+    
+    async function onQueueRconDisconnected(queue) {
+        setTimeout(async () => await queue.retryRconConnection(), 10000);
+    }
+
+    async function onQueueRconError(queue) {
+        setTimeout(async () => await queue.retryRconConnection(), 10000);
     }
 
     async function onPlayerLeftQueue(player) {
-        await player.removeDiscordRole(app.config.teams.A.role);
-        await player.removeDiscordRole(app.config.teams.B.role);
+        await player.getDiscordMember().removeRole(app.config.teams.A.role);
+        await player.getDiscordMember().removeRole(app.config.teams.B.role);
     }
 
     async function onNewPlayer(user) {
@@ -184,7 +194,7 @@ module.exports = async (app) => {
     async function onPlayerConnectedToServer(data) {
         const { queue, player } = data;
         const format = app.config.formats[queue.format];
-        const query = await queue.queryGameQueue();
+        const query = await queue.queryGameServer();
         const count = query.players.length;
 
         await player.setStatus(Player.status.CONNECTED);        
@@ -211,34 +221,33 @@ module.exports = async (app) => {
     }
 
     function registerCommands(queue) {
-        if (queue.status === queue.commands_status) return;
-        else queue.commands_status = queue.status;
+        if (prefs[queue.id]["cmd_flag"]) return;
 
-        if (queue.status === Queue.status.FREE) {
-            registerCommand({ 
-                command: 'join',
-                channel: queue.channel,
-                role: [ app.config.discord.roles.player ]
-            }, async (args) => {
-                await addPlayerQueue(args, queue, args.message.author.id)
-            });
+        prefs[queue.id]["cmd_flag"] = true;
 
-            registerCommand({ 
-                command: 'leave',
-                channel: queue.channel,
-                role: [ app.config.discord.roles.player ]
-            }, async (args) => {
-                await removePlayerQueue(args, queue, args.message.author.id)
-            });
+        registerCommand({ 
+            command: 'join',
+            channel: queue.channel,
+            role: [ app.config.discord.roles.player ]
+        }, async (args) => {
+            await addPlayerQueue(args, queue, args.message.author.id)
+        });
 
-            registerCommand({ 
-                command: 'format',
-                channel: queue.channel,
-                role: [ app.config.discord.roles.admin ]
-            }, async (args) => {
-                await changeQueueFormat(args, queue)
-            });
-        }
+        registerCommand({ 
+            command: 'leave',
+            channel: queue.channel,
+            role: [ app.config.discord.roles.player ]
+        }, async (args) => {
+            await removePlayerQueue(args, queue, args.message.author.id)
+        });
+
+        registerCommand({ 
+            command: 'format',
+            channel: queue.channel,
+            role: [ app.config.discord.roles.admin ]
+        }, async (args) => {
+            await changeQueueFormat(args, queue)
+        });
     
         registerCommand({ 
             command: 'reset',
@@ -266,7 +275,7 @@ module.exports = async (app) => {
         } catch (error) {
             log(`Failed to add player ${player_id} to Queue ${queue.name}`);
 
-            if (error.code === "Queue_NOT_FREE") {
+            if (error.code === "QUEUE_NOT_FREE") {
                 await args.message.reply("Cannot join the queue at the moment.");
             } else if (error.code === "PLAYER_ALREADY_IN_CURRENT_QUEUE") {                
                 await args.message.reply("You have already joined this queue.");
@@ -499,17 +508,16 @@ module.exports = async (app) => {
     async function divideTeams(queue, format) {      
         for (let i = 0; i < format.size * 2; i++) {
             const player = await Player.findById(queue.players.pop());
-            const member = await Discord.getMember(app.config.discord.guild, player.discord);
 
             if (i % 2 === 0) {
-                await player.addDiscordRole(app.config.teams.A.role);
+                await player.getDiscordMember().adddRole(app.config.teams.A.role);
                 queue.teamA.push(player.id);
             } else {
-                await player.addDiscordRole(app.config.teams.B.role);
+                await player.getDiscordMember().adddRole(app.config.teams.B.role);
                 queue.teamB.push(player.id);
             }
             
-            await queue.sendRconCommand(`mx_add_player ${player.steam} ${i%2} ${member.user.username}`);
+            await queue.sendRconCommand(`mx_add_player ${player.steam} ${i%2} ${player.getDiscordUser().username}`);
         }
     }
 
@@ -523,14 +531,6 @@ module.exports = async (app) => {
                 throw error;
             }
         }
-    }
-
-    async function createRconConnection(host, port, password) {
-        log("Creating rcon connection", host, port);
-
-        const rcon = new Rcon({packetResponseTimeout: 1000});
-        await rcon.connect({ host, port, password });
-        return rcon;
     }
 
     async function checkPluginVersion(queue) {

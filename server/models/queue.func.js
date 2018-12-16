@@ -15,11 +15,6 @@ module.exports = (schema) => {
         ERROR: 'error'
     });
 
-    let conns = {};
-    let channels = {};
-    let roles = {};
-    let prefs = {};
-
     schema.add({
         status: {
             type: String,
@@ -34,46 +29,6 @@ module.exports = (schema) => {
             type: Array,
             default: []
         }
-    });
-
-    schema.virtual('conn').set(function(rcon) {
-        conns[this.id] = rcon;
-    });
-
-    schema.virtual('conn').get(function() {
-        if (!conns[this.id]) throw new Error(`RCON connection for Queue '${this.name}' does not exist.`)
-
-        return conns[this.id];
-    });
-
-    schema.virtual('discord_channel').set(function(channel) {
-        channels[this.id] = channel;
-    });
-
-    schema.virtual('discord_channel').get(function() {
-        if (!channels[this.id]) throw new Error(`Channel for Queue '${this.name}' does not exist.`)
-
-        return channels[this.id];
-    });
-
-    schema.virtual('discord_role').set(function(role) {
-        roles[this.id] = role;
-    });
-
-    schema.virtual('discord_role').get(function() {
-        if (!roles[this.id]) throw new Error(`Role for Queue '${this.name}' does not exist.`)
-
-        return roles[this.id];
-    });
-
-    schema.virtual("commands_status").set(function (state) {
-        if (!prefs[this.id]) prefs[this.id] = {};
-
-        prefs[this.id].command_status = state;
-    });
-
-    schema.virtual("commands_status").get(function () {
-        return (prefs[this.id] && prefs[this.id].command_status) || 'unknown';
     });
 
     schema.statics.status = statuses;
@@ -193,7 +148,7 @@ module.exports = (schema) => {
     }
 
     schema.methods.sendDiscordMessage = async function (options) {        
-        const message = await this.discord_channel.send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
+        const message = await this.getDiscordChannel().send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
       
         if (!message) {
             throw new Error(`Failed to send message to channel ${channel.id}`);
@@ -203,14 +158,14 @@ module.exports = (schema) => {
     }
 
     schema.methods.setDiscordRoleName = async function (name) {
-        await this.discord_role.setName(name);
+        await this.getDiscordRole().setName(name);
     }
 
     schema.methods.sendRconCommand = async function (command) {
-        return this.conn.send(command);
+        return this.getRconConnection().send(command);
     }
     
-    schema.methods.queryGameQueue = async function () {
+    schema.methods.queryGameServer = async function () {
         return Gamedig.query({
             host: this.ip,
             port: this.port,

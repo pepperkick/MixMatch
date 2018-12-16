@@ -14,7 +14,7 @@
         "guild": "",
         "channels": {
             "main": "",
-            "errorLog": ""
+            "error": ""
         },
         "roles": {
             "admin": "",

@@ -129,7 +129,7 @@ module.exports = async (app) => {
     try {
         await login();
 
-        return { login, sendToChannel, getDMChannel, getUser, getMember, getGuild, getGuildChannel, getGuildRole, assignRole, on, core: bot };
+        return { login, sendToChannel, getDMChannel, getUser, getMember, getGuild, getGuildChannel, getGuildRole, assignRole, on, bot };
     } catch (error) {
         log(error);
 

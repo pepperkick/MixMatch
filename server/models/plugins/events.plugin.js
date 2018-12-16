@@ -1,10 +1,4 @@
-const events = require('events');
-
-module.exports = (schema, options) => {
-    const em =new events.EventEmitter()
-    
-    schema.statics.events = em;
-    
+module.exports = (schema, options) => {    
     schema.pre('save', function(next) {
         this._wasNew = this.isNew
         
@@ -12,10 +6,13 @@ module.exports = (schema, options) => {
     });
     
     schema.post('save', function(doc) {
+        let model = this.model(doc.constructor.modelName);
+        
         if (this._wasNew) {
-            em.emit('new', doc)
+            model.emit('new', doc)
         } else {
-            em.emit('update', doc)
+            // emit an update event only when the document is modified
+            model.emit('update', doc)
         }
     });
 }

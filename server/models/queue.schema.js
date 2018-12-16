@@ -5,6 +5,9 @@ module.exports = {
     plugins: {
         "@abskmj/mongoose-plugin-timestamps": true,
         events: true,
+        "discord.channel": true,
+        "discord.role": true,
+        rcon: true
     },
     schema: {
         name: String,

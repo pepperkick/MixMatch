@@ -5,6 +5,7 @@ module.exports = {
     plugins: {
         "@abskmj/mongoose-plugin-timestamps": true,
         events: true,
+        "discord.user": true
     },
     schema: {
         steam: String,

@@ -19,10 +19,11 @@
   "author": "PepperKick",
   "license": "ISC",
   "dependencies": {
-    "@abskmj/mongen": "github:abskmj/mongen#585e4a1eacde61813486c36491e704c604472f8e",
-    "@abskmj/servgen": "github:abskmj/servgen#8646396359a0790c059035d5cee937cebb513e41",
+    "@abskmj/mongen": "github:abskmj/mongen#ec2eee18bc0b9f8a90731c0df19a6686587621d7",
     "@abskmj/mongoose-plugin-timestamps": "github:abskmj/mongoose-plugin-timestamps#ed15406f03236caa59153c76511886ec2a782e97",
+    "@abskmj/servgen": "github:abskmj/servgen#8646396359a0790c059035d5cee937cebb513e41",
     "async-request": "^1.2.0",
+    "async-sleep": "^0.1.0",
     "debug": "^4.1.0",
     "discord.js": "^11.4.2",
     "express": "^4.16.4",
