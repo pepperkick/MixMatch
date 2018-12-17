@@ -94,15 +94,22 @@ module.exports = async (app) => {
         } else if (queue.status === Queue.status.SETUP) {
             queue.map = format.maps[Math.floor(Math.random() * format.maps.length)];
 
-            const pluginStatus = await getPluginStatus(queue);
+            try {
+                const pluginStatus = await getPluginStatus(queue);
+    
+                if (pluginStatus && pluginStatus.includes(Queue.status.SETUP)) {
+                    
+                } else {            
+                    log(`Setting up ${queue.name} for ${queue.format} with map ${queue.map}`);
+    
+                    await queue.sendRconCommand(`mx_set_map ${queue.map}`);
+                    await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
+                    await queue.save();
+                }
+            } catch (error) {
+                log("Failed to setup queue due to error", error);
 
-            if (pluginStatus.includes(Queue.status.SETUP)) {
-
-            } else {            
-                log(`Setting up ${queue.name} for ${queue.format} with map ${queue.map}`);
-                await queue.sendRconCommand(`mx_set_map ${queue.map}`);
-                await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
-                await queue.save();
+                setTimeout(() => onQueueUpdate(queue), 2000);
             }
         } else if (queue.status === Queue.status.WAITING) {
             log(`Server ${queue.name} status is now waiting.`);
@@ -341,7 +348,6 @@ module.exports = async (app) => {
 
     async function removePlayerQueue(args, queue, player_id, admin=false) {
         let player;
-
 
         try {
             player = await Player.findByDiscord(player_id);

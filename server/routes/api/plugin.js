@@ -77,6 +77,10 @@ module.exports = (app) => {
 
             const player = await Player.findBySteam(id);
 
+            if (!player) {
+                throw new Error(`No player found with it ${id}`);
+            }
+
             log(`API Call for player_connected: ${req.queue.name} ${id}`);
 
             app.emit("server_player_connected", {
