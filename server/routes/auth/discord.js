@@ -71,7 +71,7 @@ module.exports = (app) => {
           return done(null, profile);
         }
   
-        Discord.sendDm(DMChannel, {
+        Discord.sendToChannel(DMChannel, {
           text: "You need to connect your steam account with discord to continue."
         });
   
