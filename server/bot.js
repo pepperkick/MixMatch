@@ -94,12 +94,13 @@ module.exports = async (app) => {
             }
         } else if (queue.status === Queue.status.SETUP) {
             queue.map = format.maps[Math.floor(Math.random() * format.maps.length)];
-            
-            log(`Setting up ${queue.name} for ${queue.format} with map ${queue.map}`);
 
-            if (await getPluginStatus(queue).includes(Queue.status.SETUP)) {
+            const pluginStatus = await getPluginStatus(queue);
 
-            } else {
+            if (pluginStatus.includes(Queue.status.SETUP)) {
+
+            } else {            
+                log(`Setting up ${queue.name} for ${queue.format} with map ${queue.map}`);
                 await queue.sendRconCommand(`mx_set_map ${queue.map}`);
                 await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
                 await queue.save();
