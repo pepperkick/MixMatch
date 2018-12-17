@@ -114,7 +114,7 @@ module.exports = async (app) => {
             } catch (error) {
                 log("Failed to setup queue due to error", error);
 
-                setTimeout(() => onQueueUpdate(queue), 2000);
+                setTimeout(() => onQueueUpdate(queue), 10000);
             }
         } else if (queue.status === Queue.status.WAITING) {
             log(`Server ${queue.name} status is now waiting.`);
@@ -153,40 +153,46 @@ module.exports = async (app) => {
     async function onQueueRconConnected(queue) {         
         log(`${queue.name} RCON Connected Event`);
 
-        if (await checkPluginVersion(queue)) {       
-            log(`${queue.name} plugin is up to date`);
-
-            const format = app.config.formats[queue.format]; 
-            const queue_status = await queue.sendRconCommand("mx_get_status");
-
-            await queue.sendRconCommand(`mx_init ${app.config.host} ${app.config.port} ${queue.name}`);
-
-            if (queue_status.includes(Queue.status.SETUP)) {
-                await queue.setStatus(Queue.status.SETUP);       
-                log(`${queue.name} status set to SETUP`);      
-            } else if (queue_status.includes(Queue.status.WAITING)) { 
-                await queue.setStatus(Queue.status.WAITING);          
-                log(`${queue.name} status set to WAITING`);                        
-            } else if (queue_status.includes(Queue.status.LIVE)) { 
-                await queue.setStatus(Queue.status.LIVE);       
-                log(`${queue.name} status set to LIVE`);                                    
-            } else if (queue_status.includes(Queue.status.ENDED)) { 
-                await queue.setStatus(Queue.status.ENDED);      
-                log(`${queue.name} status set to ENDED`);                           
+        try {
+            if (await checkPluginVersion(queue)) {     
+                log(`${queue.name} plugin is up to date`);
+    
+                const format = app.config.formats[queue.format]; 
+                const queue_status = await queue.sendRconCommand("mx_get_status");
+    
+                await queue.sendRconCommand(`mx_init ${app.config.host} ${app.config.port} ${queue.name}`);
+    
+                if (queue_status.includes(Queue.status.SETUP)) {
+                    await queue.setStatus(Queue.status.SETUP);       
+                    log(`${queue.name} status set to SETUP`);      
+                } else if (queue_status.includes(Queue.status.WAITING)) { 
+                    await queue.setStatus(Queue.status.WAITING);          
+                    log(`${queue.name} status set to WAITING`);                        
+                } else if (queue_status.includes(Queue.status.LIVE)) { 
+                    await queue.setStatus(Queue.status.LIVE);       
+                    log(`${queue.name} status set to LIVE`);                                    
+                } else if (queue_status.includes(Queue.status.ENDED)) { 
+                    await queue.setStatus(Queue.status.ENDED);      
+                    log(`${queue.name} status set to ENDED`);                           
+                } else {
+                    await queue.setStatus(Queue.status.FREE);
+    
+                    log(`${queue.name} status set to FREE`);
+    
+                    await queue.sendRconCommand(`mx_reset`);
+                    await queue.sendRconCommand(`mx_set_format ${queue.format}`);
+                    await queue.sendRconCommand(`mx_set_size ${format.size}`);
+                    await queue.sendRconCommand(`mx_restrict_players 1`);
+                }
             } else {
-                await queue.setStatus(Queue.status.FREE);
-
-                log(`${queue.name} status set to FREE`);
-
-                await queue.sendRconCommand(`mx_reset`);
-                await queue.sendRconCommand(`mx_set_format ${queue.format}`);
-                await queue.sendRconCommand(`mx_set_size ${format.size}`);
-                await queue.sendRconCommand(`mx_restrict_players 1`);
+                log(`Queue plugin version does not match with ${app.config.plugin.version}`);
+    
+                await queue.setStatus(Queue.status.OUTDATED);
+    
+                setTimeout(() => onQueueRconConnected(queue), 10000);
             }
-        } else {
-            log(`Queue plugin version does not match with ${app.config.plugin.version}`);
-
-            await queue.setStatus(Queue.status.OUTDATED);
+        } catch (error) {
+            log(`Failed to get plugin version for server ${queue.name}`);
 
             setTimeout(() => onQueueRconConnected(queue), 10000);
         }
@@ -603,20 +609,12 @@ module.exports = async (app) => {
     }
 
     async function checkPluginVersion(queue) {
-        try {
-            const version = await queue.sendRconCommand('mx_version');
-            return version.includes(app.config.plugin.version);
-        } catch(error) {
-            log(`Failed to check version for server ${queue.name} due to error`, error);
-        }
+        const version = await queue.sendRconCommand('mx_version');
+        return version.includes(app.config.plugin.version);
     }
 
     async function getPluginStatus(queue) {
-        try {
-            const status = await queue.sendRconCommand('mx_get_status');
-            return status;
-        } catch(error) {
-            log(`Failed to check status for server ${queue.name} due to error`, error);
-        }
+        const status = await queue.sendRconCommand('mx_get_status');
+        return status;
     }
 };
