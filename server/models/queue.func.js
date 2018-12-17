@@ -127,6 +127,7 @@ module.exports = (schema) => {
         this.teamB = [];
 
         await this.setStatus(statuses.FREE);
+
         await this.sendRconCommand("mx_reset");
         await this.save();
     }
