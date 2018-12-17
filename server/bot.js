@@ -143,7 +143,13 @@ module.exports = async (app) => {
                 timestamp: new Date()
             }});
         } else if (queue.status === Queue.status.LIVE) {
-            await queue.setDiscordRoleName(`${queue.name}: Live`);
+            await queue.setDiscordRoleName(`${queue.name}: Live`);  
+            await queue.sendDiscordMessage({ embed: {
+                color: 0x00BCD4,                            
+                title: 'Setting up the Server',           
+                description: 'Enough players have joined the queue, please wait while the server sets up.',
+                timestamp: new Date()
+            }});
         } else if (queue.status === Queue.status.ENDED) {
             await queue.setDiscordRoleName(`${queue.name}: End Game`);    
             await queue.sendDiscordMessage({ embed: {

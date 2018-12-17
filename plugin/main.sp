@@ -76,7 +76,7 @@ public void OnClientAuthorized(int client) {
         KickClient(client, "You need to queue in discord to join this server");
     } else if (GetStatus() == STATE_SETUP) {
         KickClient(client, "Server is under going setup, please join back after it's done");
-    } else if (GetStatus() == STATE_WAITING) {
+    } else if (GetStatus() == STATE_WAITING || GetStatus() == STATE_LIVE) {
         char steam[32];        
         if (!GetClientAuthId(client, AuthId_SteamID64, steam, sizeof(steam))) {
             KickClient(client, "Unknown Steam ID");
@@ -90,8 +90,6 @@ public void OnClientAuthorized(int client) {
 
         Log("Player Joined with id %s", steam);
         Game_OnPlayerConnect(client);
-    } else if (GetStatus() == STATE_LIVE) {
-        KickClient(client, "Match has already started, you cannot join now");
     } else if (GetStatus() == STATE_END) {
         KickClient(client, "You need to queue in discord to join this server");
     }
@@ -374,13 +372,13 @@ public void Reset(bool notify) {
     PlayerName.Clear();
     PlayerTeam.Clear();
 
-    SetStatus(STATE_FREE);
-
     for (int i = 1; i <= MaxClients; i++) {
         if (IsClientConnected(i) && !IsClientReplay(i) && !IsClientSourceTV(i)) {
             KickClient(i, "Server is being cleaned up, please check discord for more info");
         }
     }
+
+    SetStatus(STATE_FREE);
 }
 
 public void SendRequest(char[] type, StringMap parameters) {

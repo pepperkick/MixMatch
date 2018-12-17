@@ -12,6 +12,7 @@ module.exports = (schema) => {
         WAITING: 'waiting',
         LIVE: 'live',
         ENDED: 'ended',
+        COOLDOWN: 'cooldown',
         ERROR: 'error'
     });
 
@@ -111,6 +112,8 @@ module.exports = (schema) => {
     }
     
     schema.methods.reset = async function () {
+        await this.setStatus(statuses.COOLDOWN);
+
         for (const player of this.players) {
             await this.removePlayer(player, true);
         }
@@ -125,9 +128,8 @@ module.exports = (schema) => {
 
         this.teamA = [];
         this.teamB = [];
-
+        
         await this.setStatus(statuses.FREE);
-
         await this.sendRconCommand("mx_reset");
         await this.save();
     }
