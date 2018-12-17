@@ -602,7 +602,7 @@ module.exports = async (app) => {
                 queue.teamB.push(player.id);
             }
             
-            await queue.sendRconCommand(`mx_add_player ${player.steam} ${i%2} ${player.getDiscordUser().username}`);
+            await queue.sendRconCommand(`mx_add_player ${player.steam} ${i%2} "${player.getDiscordUser().username}"`);
         }
     }
 
