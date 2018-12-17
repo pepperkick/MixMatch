@@ -510,7 +510,7 @@ module.exports = async (app) => {
                 fields.push({
                     name: 'Map',
                     value: queue.map,
-                    inline: true
+                    inline: false
                 });   
             }
 
