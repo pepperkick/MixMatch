@@ -95,7 +95,7 @@ module.exports = async (app) => {
             queue.map = format.maps[Math.floor(Math.random() * format.maps.length)];
 
             try {
-                const pluginStatus = await getPluginStatus(queue);
+                const pluginStatus = await queue.sendRconCommand('mx_get_status');
     
                 if (pluginStatus && pluginStatus.includes(Queue.status.SETUP)) {
                     
@@ -611,10 +611,5 @@ module.exports = async (app) => {
     async function checkPluginVersion(queue) {
         const version = await queue.sendRconCommand('mx_version');
         return version.includes(app.config.plugin.version);
-    }
-
-    async function getPluginStatus(queue) {
-        const status = await queue.sendRconCommand('mx_get_status');
-        return status;
     }
 };
