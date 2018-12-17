@@ -78,7 +78,6 @@ module.exports = async (app) => {
                 log(`Enough players have joined ${queue.name}, switching status to SETUP`);
 
                 await queue.sendRconCommand('mx_reset');
-                await queue.sendRconCommand(`mx_set_status ${Queue.status.SETUP}`);     
                 await divideTeams(queue, format);          
                 await queue.setStatus(Queue.status.SETUP);
             }
