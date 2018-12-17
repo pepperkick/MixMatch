@@ -94,13 +94,17 @@ module.exports = async (app) => {
         } else if (queue.status === Queue.status.SETUP) {
             queue.map = format.maps[Math.floor(Math.random() * format.maps.length)];
 
+            let flag = false;
+
             try {
                 const pluginStatus = await queue.sendRconCommand('mx_get_status');
     
-                if (pluginStatus && pluginStatus.includes(Queue.status.SETUP)) {
+                if (pluginStatus && (pluginStatus.includes(Queue.status.SETUP) || pluginStatus.includes(Queue.status.WAITING))) {
                     
                 } else {            
                     log(`Setting up ${queue.name} for ${queue.format} with map ${queue.map}`);
+
+                    flag = true;
     
                     try {
                         await queue.sendRconCommand(`mx_set_status ${Queue.status.SETUP}`);
@@ -114,7 +118,7 @@ module.exports = async (app) => {
             } catch (error) {
                 log("Failed to setup queue due to error", error);
 
-                setTimeout(() => onQueueUpdate(queue), 10000);
+                if (!flag) setTimeout(() => onQueueUpdate(queue), 10000);
             }
         } else if (queue.status === Queue.status.WAITING) {
             log(`Server ${queue.name} status is now waiting.`);
