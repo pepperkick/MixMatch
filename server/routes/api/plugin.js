@@ -56,7 +56,7 @@ module.exports = (app) => {
             } else if (req.queue.status === Queue.status.ENDED && status === Queue.status.FREE) {
                 log(`Server ${req.queue.name} is now free.`);
         
-                await req.queue.setStatus(status);
+                await queue.reset();
             }
     
             res.sendStatus(200);

@@ -151,7 +151,6 @@ module.exports = async (app) => {
                 title: 'Match Complete',
                 timestamp: new Date()
             }});
-            await queue.reset();
         }
     }
 
