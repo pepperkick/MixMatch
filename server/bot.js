@@ -97,9 +97,13 @@ module.exports = async (app) => {
             
             log(`Setting up ${queue.name} for ${queue.format} with map ${queue.map}`);
 
-            await queue.sendRconCommand(`mx_set_map ${queue.map}`);
-            await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
-            await queue.save();
+            if (await getPluginStatus(queue).includes(Queue.status.SETUP)) {
+
+            } else {
+                await queue.sendRconCommand(`mx_set_map ${queue.map}`);
+                await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
+                await queue.save();
+            }
         } else if (queue.status === Queue.status.WAITING) {
             log(`Server ${queue.name} status is now waiting.`);
 
@@ -192,7 +196,6 @@ module.exports = async (app) => {
     }
 
     async function onNewPlayer(user) {
-        checkPlayers();
     }
 
     async function onPlayerConnectedToServer(data) {
@@ -594,6 +597,15 @@ module.exports = async (app) => {
             return version.includes(app.config.plugin.version);
         } catch(error) {
             log(`Failed to check version for server ${queue.name} due to error`, error);
+        }
+    }
+
+    async function getPluginStatus(queue) {
+        try {
+            const status = await queue.sendRconCommand('mx_get_status');
+            return status;
+        } catch(error) {
+            log(`Failed to check status for server ${queue.name} due to error`, error);
         }
     }
 };
