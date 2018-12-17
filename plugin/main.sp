@@ -167,10 +167,18 @@ public Action Command_Reset(int client, int args) {
 
 public Action Command_AddPlayer(int client, int args) {
     char steam[128], team[4], name[128];
-
+    
     GetCmdArg(1, steam, sizeof(steam));
     GetCmdArg(2, team, sizeof(team));
     GetCmdArg(3, name, sizeof(name));
+    
+    if (args > 3) {
+        for (int i = 4; i <= args; i++) {
+            char temp[128];
+            GetCmdArg(i, temp, sizeof(temp));
+            Format(name, sizeof(name), "%s %s", name, temp);
+        }
+    }
 
     if (PlayerSteam.FindString(steam) == -1) {
         PlayerSteam.PushString(steam);
