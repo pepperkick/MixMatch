@@ -111,9 +111,6 @@ module.exports = (schema) => {
     }
     
     schema.methods.reset = async function () {
-        await this.setStatus(statuses.FREE);
-        await this.sendRconCommand("mx_reset");
-
         for (const player of this.players) {
             await this.removePlayer(player, true);
         }
@@ -129,6 +126,8 @@ module.exports = (schema) => {
         this.teamA = [];
         this.teamB = [];
 
+        await this.setStatus(statuses.FREE);
+        await this.sendRconCommand("mx_reset");
         await this.save();
     }
 
