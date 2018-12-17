@@ -102,9 +102,14 @@ module.exports = async (app) => {
                 } else {            
                     log(`Setting up ${queue.name} for ${queue.format} with map ${queue.map}`);
     
-                    await queue.sendRconCommand(`mx_set_map ${queue.map}`);
-                    await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
-                    await queue.save();
+                    try {
+                        await queue.sendRconCommand(`mx_set_status ${Queue.status.SETUP}`);
+                        await queue.sendRconCommand(`mx_set_map ${queue.map}`);
+                        await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
+                        await queue.save();
+                    } catch (error) {
+                        log(error);
+                    }
                 }
             } catch (error) {
                 log("Failed to setup queue due to error", error);

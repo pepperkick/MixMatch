@@ -205,9 +205,9 @@ public Action Command_SetMap(int client, int args) {
     
     GetCmdArg(1, map, sizeof(map));
 
-    ServerCommand("changelevel %s", map);
-
     PrintToServer("response::ok");
+
+    ServerCommand("changelevel %s", map);
 
     Log("Sent command to change server map to %d", map);
 
