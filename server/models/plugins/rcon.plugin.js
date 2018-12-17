@@ -2,6 +2,10 @@ module.exports = (schema, options) => {
     const app = options.app;
     let cache = {};
 
+    schema.virtual("rconConn").get(function () {
+        return this.getRconConnection();
+    });
+
     schema.methods.createRconConnection = async function () {
         let ip = this.ip || this[options.ip];
         let port = this.port || this[options.port];

@@ -2,6 +2,10 @@ module.exports = async (schema, options) => {
     const app = options.app;
     const cache = {};
 
+    schema.virtual("discordRole").get(function () {
+        return this.getDiscordRole();
+    });
+
     schema.methods.getDiscordRole = function () {
         let id = this.role || this[options.id];
 

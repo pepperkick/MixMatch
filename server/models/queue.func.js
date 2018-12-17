@@ -45,6 +45,8 @@ module.exports = (schema) => {
         this.status = status;
         
         await this.save();
+        
+        log(`${this.name}'s status changed to ${this.status}`);
     }
 
     schema.methods.isFree = function () {
@@ -148,7 +150,7 @@ module.exports = (schema) => {
     }
 
     schema.methods.sendDiscordMessage = async function (options) {        
-        const message = await this.getDiscordChannel().send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
+        const message = await this.discordChannel.send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
       
         if (!message) {
             throw new Error(`Failed to send message to channel ${channel.id}`);
@@ -158,11 +160,11 @@ module.exports = (schema) => {
     }
 
     schema.methods.setDiscordRoleName = async function (name) {
-        await this.getDiscordRole().setName(name);
+        await this.discordRole.setName(name);
     }
 
     schema.methods.sendRconCommand = async function (command) {
-        return this.getRconConnection().send(command);
+        return this.rconConn.send(command);
     }
     
     schema.methods.queryGameServer = async function () {

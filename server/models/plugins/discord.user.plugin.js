@@ -1,6 +1,14 @@
 module.exports = async (schema, options) => {
     const app = options.app;
 
+    schema.virtual("discordUser").get(function () {
+        return this.getDiscordUser();
+    });
+    
+    schema.virtual("discordMember").get(function () {
+        return this.getDiscordMember();
+    });
+
     schema.methods.getDiscordUser = function () {
         let id = this.discord || this[options.id];
 

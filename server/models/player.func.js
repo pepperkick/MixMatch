@@ -49,7 +49,7 @@ module.exports = (schema, app) => {
 
     schema.methods.leaveQueue = async function () {
         try {
-            await this.getDiscordMember().removeRole(this.queue.role);
+            await this.discordMember.removeRole(this.queue.role);
         } catch (error) {
             log(error);
         }
@@ -66,7 +66,7 @@ module.exports = (schema, app) => {
         this.status = statuses.JOINED;
         this.queue = queue.id;
 
-        await this.getDiscordMember().addRole(queue.role);
+        await this.discordMember.addRole(queue.role);
         await this.save();
 
         this.model(this.constructor.modelName).emit('player_joined_queue', this);
