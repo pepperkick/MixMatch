@@ -10,7 +10,7 @@ module.exports = (schema, options) => {
         
         if (this._wasNew) {
             model.emit('new', doc)
-        } else if (this.isModified()) {
+        } else {
             // emit an update event only when the document is modified
             model.emit('update', doc)
         }
