@@ -3,6 +3,9 @@ const Gamedig = require('gamedig');
 const Exception = require("../objects/exception");
 
 const log = require('debug')('app:models:queue');
+
+let cache = {};
+
 module.exports = (schema) => {
     const statuses = Object.freeze({
         UNKNOWN: 'unknown',
@@ -130,7 +133,7 @@ module.exports = (schema) => {
         this.teamB = [];
         
         await this.save();
-        await this.sendRconCommand("mx_reset");
+        await this.rconConn.send("mx_reset");
     }
 
     schema.methods.changeFormat = async function (format) {
@@ -145,7 +148,7 @@ module.exports = (schema) => {
 
         this.format = format;
 
-        await this.sendRconCommand(`mx_set_format ${this.format}`);
+        await this.rconConn.send(`mx_set_format ${this.format}`);
 
         await this.save();
     }
@@ -159,14 +162,6 @@ module.exports = (schema) => {
       
         return message;
     }
-
-    schema.methods.setDiscordRoleName = async function (name) {
-        await this.discordRole.setName(name);
-    }
-
-    schema.methods.sendRconCommand = async function (command) {
-        return this.rconConn.send(command);
-    }
     
     schema.methods.queryGameServer = async function () {
         return Gamedig.query({
@@ -175,4 +170,16 @@ module.exports = (schema) => {
             type: 'tf2'
         })
     }
+
+    schema.post('init', async doc => {
+        try {
+            if (cache[`${doc.ip}:${doc.port}`]) return;
+
+            cache[`${doc.ip}:${doc.port}`] = true;
+
+            await doc.setStatus(statuses.UNKNOWN);
+        } catch (error) {
+            log(error);
+        }
+    });
 }

@@ -26,7 +26,13 @@ public int CountPlayersInTeam(int team) {
 }
 
 public bool IsClientInAnyTeam(client) {
-    return IsClientProper(client) ? (GetClientTeam(client) == TEAM_BLU || GetClientTeam(client) == TEAM_RED) : false;
+    #if defined GAME_CSGO
+        return IsClientProper(client) ? (GetClientTeam(client) == TEAM_T || GetClientTeam(client) == TEAM_CT) : false;
+    #endif
+
+    #if defined GAME_TF2
+        return IsClientProper(client) ? (GetClientTeam(client) == TEAM_BLU || GetClientTeam(client) == TEAM_RED) : false;
+    #endif
 }
 
 public bool IsClientInTeam(client, team) {
@@ -39,13 +45,4 @@ public bool IsClientProper(client) {
     #endif
 
     return client != 0 ? IsClientInGame(client) && !IsFakeClient(client) : false;
-}
-
-public int GetArgTeam(char[] arg) {
-    if (StrEqual(arg, "spectate", false))  return TEAM_SPC;
-    if (StrEqual(arg, "spectator", false)) return TEAM_SPC;
-    if (StrEqual(arg, "blue", false))      return TEAM_BLU;
-    if (StrEqual(arg, "red", false))       return TEAM_RED;
-
-    return 0;
 }

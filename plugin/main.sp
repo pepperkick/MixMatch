@@ -8,7 +8,9 @@
 #define MAX_RETRIES     3
 #define RETRY_INTERVAL  3
 #define CONFIG_DIR      "mixmatch"
-#define GAME_TF2
+
+#define ALLOWBOT
+#define GAME_CSGO
 
 public Plugin:myinfo = {
     name = "MixMatch",
@@ -101,7 +103,7 @@ public void OnClientPostAdminCheck(int client) {
 
 public void OnMapStart() {
     #if defined GAME_TF2
-    Match_OnMapStart();
+        Match_OnMapStart();
     #endif
 
     if (GetStatus() == STATE_SETUP) {
@@ -229,7 +231,7 @@ public Action Command_SetFormat(int client, int args) {
 
     PrintToServer("response::ok::%s", format);
 
-    Log("Changed server format to %d", ServerFormat);
+    Log("Changed server format to %s", ServerFormat);
 
     return Plugin_Continue;
 }
@@ -386,8 +388,8 @@ public void SendRequest(char[] type, StringMap parameters) {
 
     Format(url, sizeof(url), "http://%s:%s/plugin/%s", HostIP, HostPort, type);
 
-    HTTPRequest req = HTTPRequest("GET", url, "OnRequestComplete");
-    req.headers.SetString("User-Agent", "HTTPRequests for SourceMod");
+    Handle req = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, url);
+    SteamWorks_SetHTTPRequestHeaderValue(req, "User-Agent", "SteamWorks for SourceMod")
 
     StringMapSnapshot keys = parameters.Snapshot();
 
@@ -398,12 +400,12 @@ public void SendRequest(char[] type, StringMap parameters) {
         keys.GetKey(i, key, sizeof(key));
         parameters.GetString(key, value, sizeof(value));
 
-        req.params.SetString(key, value);
+        SteamWorks_SetHTTPRequestGetOrPostParameter(req, key, value);
     }
     
-    req.params.SetString("name", ServerName);
+    SteamWorks_SetHTTPRequestGetOrPostParameter(req, "name", ServerName);
 
-    req.SendRequest();
+    SteamWorks_SendHTTPRequest(req);
 
     Log("Sending request %s", type);
 }

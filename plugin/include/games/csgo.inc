@@ -1,9 +1,13 @@
 int playerCount = 0;
 int dummyRound = 0;
 
+Handle warmupTimer;
+
 public void Game_OnPluginLoad() {
     HookEvent("cs_win_panel_match", Event_GameOver);
     HookEvent("round_prestart", Event_RoundStart);
+
+    warmupTimer = CreateTimer(15.0, Timer_IncreaseWarmUp, _, TIMER_REPEAT);  
 }
 
 public void Game_OnMapEnd() {
@@ -20,6 +24,8 @@ public void Game_OnPlayerConnect(int client) {
     Log("%d: %d", playerCount, ServerTeamSize);
 
     if (playerCount >= ServerTeamSize * 2) {
+        KillTimer(warmupTimer);
+
         ServerCommand("mp_warmuptime 15");
         ServerCommand("mp_warmup_start");
         ServerCommand("bot_kick all");
@@ -41,10 +47,10 @@ public void Game_OnPlayerConnectPost(int client) {
 
     PlayerName.GetString(steam, name, sizeof(name));
     SetClientName(client, name);
-    SendRequest("player_connected", parameters);
 
     StringMap parameters = new StringMap();
     parameters.SetString("id", steam);
+    SendRequest("player_connected", parameters);
 }
 
 public Action Event_GameOver(Event event, const char[] name, bool dontBroadcast) {
@@ -84,3 +90,8 @@ public Action GameCommand_JoinTeam(int client, const char[] command, int argc) {
 
     return Plugin_Handled;
 }
+
+public Action Timer_IncreaseWarmUp(Handle timer)
+{
+    ServerCommand(" sm_cvar mp_warmuptime 900");
+}  

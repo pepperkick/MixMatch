@@ -25,7 +25,7 @@
 #include <sourcemod>
 #include <morecolors>
 #include <sdktools>
-#include <httpreq>
+#include <SteamWorks>
 
 #include <libs/hud>
 

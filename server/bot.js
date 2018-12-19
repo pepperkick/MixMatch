@@ -72,21 +72,27 @@ module.exports = async (app) => {
         const format = app.config.formats[queue.format];
         
         if (queue.status === Queue.status.UNKNOWN) {
-            await queue.setStatus(Queue.status.FREE);
+            if (queue.isRconConnected) {
+                queue.setStatus(Queue.status.FREE);
+            } else {
+                log(`Rcon is not connected for queue ${queue.name}`);
+    
+                setTimeout(() => queue.retryRconConnection(), 10000);
+            }
         } else if (queue.status === Queue.status.FREE) {
             if (queue.players.length >= format.size * 2) {        
                 log(`Enough players have joined ${queue.name}, switching status to SETUP`);
 
-                await queue.sendRconCommand('mx_reset');
+                await queue.rconConn.send('mx_reset');
                 await divideTeams(queue, format);          
                 await queue.setStatus(Queue.status.SETUP);
             }
 
             try {
                 if (queue.players.length === 0) {
-                    await queue.setDiscordRoleName(`${queue.name}: Empty`);
+                    await queue.discordRole.setName(`${queue.name}: Empty`);
                 } else {
-                    await queue.setDiscordRoleName(`${queue.name}: Queuing (${queue.players.length}/${format.size * 2})`);
+                    await queue.discordRole.setName(`${queue.name}: Queuing (${queue.players.length}/${format.size * 2})`);
                 }
             } catch (error) {
                 log(`Failed to set role name for Queue ${queue.name}`, error);
@@ -97,7 +103,7 @@ module.exports = async (app) => {
             let flag = false;
 
             try {
-                const pluginStatus = await queue.sendRconCommand('mx_get_status');
+                const pluginStatus = await queue.rconConn.send('mx_get_status');
     
                 if (pluginStatus && (pluginStatus.includes(Queue.status.SETUP) || pluginStatus.includes(Queue.status.WAITING))) {
                     
@@ -107,9 +113,9 @@ module.exports = async (app) => {
                     flag = true;
     
                     try {
-                        await queue.sendRconCommand(`mx_set_status ${Queue.status.SETUP}`);
-                        await queue.sendRconCommand(`mx_set_map ${queue.map}`);
-                        await queue.setDiscordRoleName(`${queue.name}: Setting Up`);
+                        await queue.rconConn.send(`mx_set_status ${Queue.status.SETUP}`);
+                        await queue.rconConn.send(`mx_set_map ${queue.map}`);
+                        await queue.discordRole.setName(`${queue.name}: Setting Up`);
                         await queue.save();
                     } catch (error) {
                         log(error);
@@ -123,7 +129,7 @@ module.exports = async (app) => {
         } else if (queue.status === Queue.status.WAITING) {
             log(`Server ${queue.name} status is now waiting.`);
 
-            await queue.setDiscordRoleName(`${queue.name}: Waiting (0/${format.size * 2})`);
+            await queue.discordRole.setName(`${queue.name}: Waiting (0/${format.size * 2})`);
             await queue.sendDiscordMessage({ embed: {
                 color: 0x00BCD4,                            
                 title: 'Server is Ready',
@@ -143,7 +149,7 @@ module.exports = async (app) => {
                 timestamp: new Date()
             }});
         } else if (queue.status === Queue.status.LIVE) {
-            await queue.setDiscordRoleName(`${queue.name}: Live`);  
+            await queue.discordRole.setName(`${queue.name}: Live`);  
             await queue.sendDiscordMessage({ embed: {
                 color: 0x00BCD4,                            
                 title: 'Setting up the Server',           
@@ -151,7 +157,7 @@ module.exports = async (app) => {
                 timestamp: new Date()
             }});
         } else if (queue.status === Queue.status.ENDED) {
-            await queue.setDiscordRoleName(`${queue.name}: End Game`);    
+            await queue.discordRole.setName(`${queue.name}: End Game`);    
             await queue.sendDiscordMessage({ embed: {
                 color: 0x00BCD4,                            
                 title: 'Match Complete',
@@ -168,9 +174,9 @@ module.exports = async (app) => {
                 log(`${queue.name} plugin is up to date`);
     
                 const format = app.config.formats[queue.format]; 
-                const queue_status = await queue.sendRconCommand("mx_get_status");
+                const queue_status = await queue.rconConn.send("mx_get_status");
     
-                await queue.sendRconCommand(`mx_init ${app.config.host} ${app.config.port} ${queue.name}`);
+                await queue.rconConn.send(`mx_init ${app.config.host} ${app.config.port} ${queue.name}`);
     
                 if (queue_status.includes(Queue.status.SETUP)) {
                     await queue.setStatus(Queue.status.SETUP);       
@@ -189,10 +195,10 @@ module.exports = async (app) => {
     
                     log(`${queue.name} status set to FREE`);
     
-                    await queue.sendRconCommand(`mx_reset`);
-                    await queue.sendRconCommand(`mx_set_format ${queue.format}`);
-                    await queue.sendRconCommand(`mx_set_size ${format.size}`);
-                    await queue.sendRconCommand(`mx_restrict_players 1`);
+                    await queue.rconConn.send(`mx_reset`);
+                    await queue.rconConn.send(`mx_set_format ${queue.format}`);
+                    await queue.rconConn.send(`mx_set_size ${format.size}`);
+                    await queue.rconConn.send(`mx_restrict_players 1`);
                 }
             } else {
                 log(`Queue "${queue.name}" plugin version does not match with ${app.config.plugin.version}`);
@@ -233,7 +239,7 @@ module.exports = async (app) => {
         const count = query.players.length;
 
         await player.setStatus(Player.status.CONNECTED);        
-        await queue.setDiscordRoleName(`${queue.name}: Waiting (${count}/${format.size * 2})`);
+        await queue.discordRole.setName(`${queue.name}: Waiting (${count}/${format.size * 2})`);
     }
 
     async function createNewQueue(name, queue) {
@@ -607,7 +613,7 @@ module.exports = async (app) => {
                 queue.teamB.push(player.id);
             }
             
-            await queue.sendRconCommand(`mx_add_player ${player.steam} ${i%2} "${player.getDiscordUser().username}"`);
+            await queue.rconConn.send(`mx_add_player ${player.steam} ${i%2} "${player.getDiscordUser().username}"`);
         }
     }
 
@@ -624,7 +630,7 @@ module.exports = async (app) => {
     }
 
     async function checkPluginVersion(queue) {
-        const version = await queue.sendRconCommand('mx_version');
+        const version = await queue.rconConn.send('mx_version');
         return version.includes(app.config.plugin.version);
     }
 };

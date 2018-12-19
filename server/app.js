@@ -44,6 +44,20 @@ module.exports.init = async() => {
             }
         }
         
+        if (error.code === "ETIMEDOUT" && error.address && error.port) {
+            const queue = await Queue.findByIp(error.address, error.port);
+
+            if (queue) {
+                 setTimeout(() => queue.setStatus(Queue.status.UNKNOWN), 30000);
+                 
+                 return;
+            }
+        }
+        
+        if (error.code === "ECONNRESET") {
+            Queue.disconnectAllRconConnection();
+        }
+        
         await generateErrorReport({
             type: "Uncaught Exception",
             error
