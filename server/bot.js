@@ -77,7 +77,7 @@ module.exports = async (app) => {
             } else {
                 log(`Rcon is not connected for queue ${queue.name}`);
     
-                setTimeout(() => queue.retryRconConnection(), 10000);
+                setTimeout(() => queue.retryRconConnection(), 2500);
             }
         } else if (queue.status === Queue.status.FREE) {
             if (queue.players.length >= format.size * 2) {        
@@ -117,6 +117,12 @@ module.exports = async (app) => {
                         await queue.rconConn.send(`mx_set_map ${queue.map}`);
                         await queue.discordRole.setName(`${queue.name}: Setting Up`);
                         await queue.save();
+                        await queue.sendDiscordMessage({ embed: {
+                            color: 0x00BCD4,                            
+                            title: 'Setting up the Server',           
+                            description: 'Enough players have joined the queue, please wait while the server sets up.',
+                            timestamp: new Date()
+                        }});
                     } catch (error) {
                         log(error);
                     }
@@ -150,12 +156,6 @@ module.exports = async (app) => {
             }});
         } else if (queue.status === Queue.status.LIVE) {
             await queue.discordRole.setName(`${queue.name}: Live`);  
-            await queue.sendDiscordMessage({ embed: {
-                color: 0x00BCD4,                            
-                title: 'Setting up the Server',           
-                description: 'Enough players have joined the queue, please wait while the server sets up.',
-                timestamp: new Date()
-            }});
         } else if (queue.status === Queue.status.ENDED) {
             await queue.discordRole.setName(`${queue.name}: End Game`);    
             await queue.sendDiscordMessage({ embed: {
@@ -167,6 +167,7 @@ module.exports = async (app) => {
     }
 
     async function onQueueRconConnected(queue) {         
+        queue = await Queue.findById(queue.id);
         log(`${queue.name} RCON Connected Event`);
 
         try {
@@ -343,6 +344,7 @@ module.exports = async (app) => {
         let player;
 
         try {
+            queue = await Queue.findById(queue.id);
             player = await Player.findByDiscord(player_id);
             
             await queue.addPlayer(player);         
@@ -377,6 +379,7 @@ module.exports = async (app) => {
         let player;
 
         try {
+            queue = await Queue.findById(queue.id);
             player = await Player.findByDiscord(player_id);
 
             await queue.removePlayer(player);            
@@ -408,6 +411,8 @@ module.exports = async (app) => {
     }
 
     async function changeQueueFormat(args, queue) {
+        queue = await Queue.findById(queue.id);
+        
         const queue_config = app.config.queues[queue.name];
         const format = args.parameters[1];
 
@@ -457,9 +462,13 @@ module.exports = async (app) => {
 
     async function getQueueStatus(args, queue) {
         try {
+            queue = await Queue.findById(queue.id);
+
             const fields = [];
             const format = queue.format;
             
+            log(`Current Status of ${queue.name} ${queue.status}`);
+
             const embed = {
                 color: 0x00BCD4,
                 title: `Server ${queue.name}`,
@@ -592,6 +601,8 @@ module.exports = async (app) => {
 
     async function resetQueue(args, queue) {
         try {
+            queue = await Queue.findById(queue.id);
+
             await queue.reset();
 
             await args.message.reply(`Successfully cleared the queue.`);

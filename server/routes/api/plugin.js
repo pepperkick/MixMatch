@@ -39,9 +39,13 @@ module.exports = (app) => {
                 throw new Error('No queue status was given');
             }
 
-            log(`API Call for status_change: ${req.queue.name} ${status}`);
+            log(`API Call for status_change: ${req.queue.name} (${req.queue.status}) ${status}`);
             
-            if (req.queue.status === Queue.status.SETUP && status === Queue.status.WAITING) {
+            if (req.queue.status === Queue.status.COOLDOWN && status === Queue.status.FREE) {
+                log(`Server ${req.queue.name} is cleared.`);
+        
+                await req.queue.setStatus(status);
+            } else if (req.queue.status === Queue.status.SETUP && status === Queue.status.WAITING) {
                 log(`Setup for server ${req.queue.name} is done.`);
         
                 await req.queue.setStatus(status);

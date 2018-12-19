@@ -6,8 +6,6 @@ Handle warmupTimer;
 public void Game_OnPluginLoad() {
     HookEvent("cs_win_panel_match", Event_GameOver);
     HookEvent("round_prestart", Event_RoundStart);
-
-    warmupTimer = CreateTimer(15.0, Timer_IncreaseWarmUp, _, TIMER_REPEAT);  
 }
 
 public void Game_OnMapEnd() {
@@ -18,23 +16,14 @@ public void Game_OnPlayerConnect(int client) {
     if (IsClientSourceTV(client)) {
         return;
     }
-
+    
     playerCount++;
-
-    Log("%d: %d", playerCount, ServerTeamSize);
-
-    if (playerCount >= ServerTeamSize * 2) {
-        KillTimer(warmupTimer);
-
-        ServerCommand("mp_warmuptime 15");
-        ServerCommand("mp_warmup_start");
-        ServerCommand("bot_kick all");
-        ServerCommand("bot_quota 0");
-    }
 
     if (playerCount == 1) {
         ServerCommand("bot_kick all");
         ServerCommand("bot_quota 0");
+
+        warmupTimer = CreateTimer(10.0, Timer_IncreaseWarmUp, _, TIMER_REPEAT);  
     }
 }
 
@@ -62,7 +51,7 @@ public Action Event_GameOver(Event event, const char[] name, bool dontBroadcast)
         dummyRound = 0;
     }
 
-    CreateTimer(30 * 1.0, Timer_PostMatchCoolDown);
+    CreateTimer(15 * 1.0, Timer_PostMatchCoolDown);
 }
 
 public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
@@ -71,8 +60,10 @@ public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcas
     if (GetStatus() == STATE_WAITING) {
         dummyRound++;
 
-        if (dummyRound == 3) {
+        if (dummyRound >= 3) {
             SetStatus(STATE_LIVE);
+
+            dummyRound = 0;
         }
     }
 }
@@ -91,7 +82,17 @@ public Action GameCommand_JoinTeam(int client, const char[] command, int argc) {
     return Plugin_Handled;
 }
 
-public Action Timer_IncreaseWarmUp(Handle timer)
-{
+public Action Timer_IncreaseWarmUp(Handle timer) {
+    Log("Players %d / %d", CountPlayersInAnyTeam(), ServerTeamSize * 2);
+
     ServerCommand(" sm_cvar mp_warmuptime 900");
+
+    if (CountPlayersInAnyTeam() >= ServerTeamSize * 2) {
+        KillTimer(warmupTimer);
+
+        ServerCommand("mp_warmuptime 15");
+        ServerCommand("mp_warmup_start");
+        ServerCommand("bot_kick all");
+        ServerCommand("bot_quota 0");
+    }
 }  
