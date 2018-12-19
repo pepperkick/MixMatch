@@ -23,7 +23,7 @@ module.exports = async (app) => {
         if (player) {
             await args.message.reply("You have already registered with us!");
         } else {
-            await args.message.reply(`It seems like you have not registered with us, please visit the following link to register with us so you can enjoy the matches.\nhttp://${app.config.host}:${app.config.port}/auth/discord`)
+            await args.message.reply(`It seems like you have not registered with us, please visit the following link to register with us so you can enjoy the matches.\nhttp://${app.config.registerLink}/auth/discord`)
         }
     });
 
