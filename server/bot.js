@@ -359,11 +359,11 @@ module.exports = async (app) => {
                 if (admin) await args.message.reply(`"${player.discordUser.username}" not found.`);        
                 else await args.message.reply('Unable to process your request, please make sure that you have registered with the bot');
             } else {
-                log(error);
-
                 if (admin) await args.message.reply(`Failed to add ${player.discordUser.username} to queue.`);   
                 else await args.message.reply('Failed due to internal error, please try again later.');
             }
+            
+            log(error);
         }
     }
 
@@ -393,11 +393,11 @@ module.exports = async (app) => {
                 if (admin) await args.message.reply(`"${player.discordUser.username}" not found.`);        
                 else await args.message.reply('Unable to process your request, please make sure that you have registered with the bot');
             } else {
-                log(error);
-
                 if (admin) await args.message.reply(`Failed to remove "${player.discordUser.username}" to queue.`);   
                 else await args.message.reply('Failed due to internal error, please try again later.');
             }
+            
+            log(error);
         }
     }
 
@@ -442,10 +442,10 @@ module.exports = async (app) => {
             } else if (error.code === "QUEUE_NOT_FREE") {
                 await args.message.reply("Cannot change the format as players are in queue.");                
             } else {
-                log(error);
-
                 await args.message.reply('Failed due to internal error, please try again later.');
             }
+
+            log(error);
         }
     }
 
