@@ -34,8 +34,8 @@ module.exports.init = async() => {
     process.on('uncaughtException',  async (error) => {
         log('Caught exception: ', error, error.stack);
 
-        if (error.code === "ECONNREFUSED" && error.ip && error.port) {
-            const queue = await Queue.findByIp(error.ip, error.port);
+        if (error.code === "ECONNREFUSED" && error.address && error.port) {
+            const queue = await Queue.findByIp(error.address, error.port);
 
             if (queue) {
                 return queue.setStatus(Queue.status.UNKNOWN0);
