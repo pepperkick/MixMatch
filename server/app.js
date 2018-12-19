@@ -38,7 +38,9 @@ module.exports.init = async() => {
             const queue = await Queue.findByIp(error.address, error.port);
 
             if (queue) {
-                return queue.setStatus(Queue.status.UNKNOWN0);
+                 setTimeout(() => queue.setStatus(Queue.status.UNKNOWN), 30000);
+                 
+                 return;
             }
         }
         
