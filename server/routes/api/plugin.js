@@ -8,11 +8,13 @@ module.exports = (app) => {
     const router = express.Router();
 
     async function checkQueueName(req, res, next) {
+        log(req.query);
+
         const name = req.query.name;
 
         try {
             if (!name) {
-                throw new Error('No queue name were given');
+                throw new Error('No queue name was given');
             }
     
             const queue = await Queue.findByName(name);
@@ -36,7 +38,7 @@ module.exports = (app) => {
 
         try {
             if (!status) {
-                throw new Error('No Queue status were given');
+                throw new Error('No queue status was given');
             }
 
             log(`API Call for status_change: ${req.queue.name} ${status}`);
