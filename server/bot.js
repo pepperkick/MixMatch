@@ -195,7 +195,7 @@ module.exports = async (app) => {
                     await queue.sendRconCommand(`mx_restrict_players 1`);
                 }
             } else {
-                log(`Queue plugin version does not match with ${app.config.plugin.version}`);
+                log(`Queue "${queue.name}" plugin version does not match with ${app.config.plugin.version}`);
     
                 await queue.setStatus(Queue.status.OUTDATED);
     
@@ -487,6 +487,11 @@ module.exports = async (app) => {
                     name: 'Status',
                     value: 'Match is currently live'
                 });
+            } else if (queue.status === Queue.status.OUTDATED) {
+                fields.push({
+                    name: 'Status',
+                    value: 'Currently Unavailable!'
+                });
             }
 
             if (queue.status === Queue.status.FREE) {
@@ -572,7 +577,7 @@ module.exports = async (app) => {
                 });
             }
 
-            await Discord.sendToChannel(queue.channel, { embed });
+            await queue.sendDiscordMessage({ embed });
         } catch (error) {
             log(`Failed to send status message for Queue ${queue.name}`);
             log(error);

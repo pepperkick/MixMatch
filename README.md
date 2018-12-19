@@ -7,11 +7,12 @@ A project that creates mixes and pugs for TF2 and CSGO via discord
 - Server
 - Discord
 - Sourcemod
-- Testing
+- Testings
 
 ## Requirements
 
-- Sourcemod (v1.0.0)
+- Plugin
+  - Sourcemod (>= v1.9.0)
   - Socket Extension
 
 ## Bot Config
