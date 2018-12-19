@@ -14,6 +14,8 @@ module.exports.init = async() => {
     let app = new express();
     
     await servgen.init(app, __dirname + '/services');
+
+    const Queue = app.connection.model("Queue");
     
     // attach bot
     bot(app);
@@ -31,6 +33,14 @@ module.exports.init = async() => {
     
     process.on('uncaughtException',  async (error) => {
         log('Caught exception: ', error, error.stack);
+
+        if (error.code === "ECONNREFUSED" && error.ip && error.port) {
+            const queue = await Queue.findByIp(error.ip, error.port);
+
+            if (queue) {
+                return queue.setStatus(Queue.status.UNKNOWN0);
+            }
+        }
         
         await generateErrorReport({
             type: "Uncaught Exception",
@@ -46,7 +56,7 @@ module.exports.init = async() => {
         if (reason.message.includes("Response timeout for packet id")) {
             log("RCON Error", reason.message);
 
-            app.connection.model("Queue").disconnectAllRconConnection();
+            Queue.disconnectAllRconConnection();
         }
 
         // await generateErrorReport({

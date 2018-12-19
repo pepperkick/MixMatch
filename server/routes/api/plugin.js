@@ -8,8 +8,6 @@ module.exports = (app) => {
     const router = express.Router();
 
     async function checkQueueName(req, res, next) {
-        log(req.query);
-
         const name = req.query.name;
 
         try {
