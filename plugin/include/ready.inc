@@ -15,7 +15,7 @@ public Action Command_PlayerReady(int client, int args) {
     parameters.SetString("steam", steam);
     parameters.SetString("client", _client);
 
-    SendRequest("check_discord", parameters);
+    SendRequest("player_ready", parameters);
 }
 
 public Action Command_ReadyPlayer(int client, int args) {

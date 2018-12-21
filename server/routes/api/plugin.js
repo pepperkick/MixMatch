@@ -100,7 +100,7 @@ module.exports = (app) => {
         }
     });
 
-    router.get('/check_discord', checkQueueName, async (req, res, next) => {
+    router.get('/player_ready', checkQueueName, async (req, res, next) => {
         const id = req.query.steam;
         const client = req.query.client;
 
@@ -121,7 +121,7 @@ module.exports = (app) => {
 
             const voiceChannel = player.discordMember.voiceChannelID;
             const playerTeam = await player.team;
-            
+
             log(`API Call for check_discord: ${req.queue.name} ${id}`);
 
             if (playerTeam === "A" && voiceChannel === app.config.queues[req.queue.name].voiceChannelA) {
