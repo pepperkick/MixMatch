@@ -71,4 +71,24 @@ module.exports = (schema, app) => {
 
         this.model(this.constructor.modelName).emit('player_joined_queue', this);
     }
+
+    schema.virtual("team").get(async function () {
+        if (!this.queue) return null;
+
+        const player = await this.populate("queue").execPopulate();
+
+        for (let i in player.queue.teamA) {
+            if (player.queue.teamA[i].toString() == player.id) {
+                return "A"
+            }
+        }
+
+        for (let i in player.queue.teamB) {
+            if (player.queue.teamB[i].toString() == player.id) {
+                return "B"
+            }
+        }
+        
+        return null;
+    });
 }

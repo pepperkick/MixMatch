@@ -83,11 +83,12 @@ public Action GameCommand_JoinTeam(int client, const char[] command, int argc) {
 }
 
 public Action Timer_IncreaseWarmUp(Handle timer) {
-    Log("Players %d / %d", CountPlayersInAnyTeam(), ServerTeamSize * 2);
+    Log("Player Count %d / %d", CountPlayersInAnyTeam(), ServerTeamSize * 2);
+    Log("Player Ready %d / %d", CountReadyPlayers(), ServerTeamSize * 2);
 
     ServerCommand(" sm_cvar mp_warmuptime 900");
 
-    if (CountPlayersInAnyTeam() >= ServerTeamSize * 2) {
+    if (CountReadyPlayers() >= ServerTeamSize * 2) {
         KillTimer(warmupTimer);
 
         ServerCommand("mp_warmuptime 15");

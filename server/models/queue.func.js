@@ -173,6 +173,8 @@ module.exports = (schema) => {
 
     schema.post('init', async doc => {
         try {
+            // TODO: Make status as virtual
+
             if (cache[`${doc.ip}:${doc.port}`]) return;
 
             cache[`${doc.ip}:${doc.port}`] = true;

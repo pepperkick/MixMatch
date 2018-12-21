@@ -76,7 +76,7 @@ module.exports = (app) => {
 
         try {
             if (!id) {
-                throw new Error('No player steam id were given');
+                throw new Error('No player steam id was given');
             }
 
             const player = await Player.findBySteam(id);
@@ -95,6 +95,52 @@ module.exports = (app) => {
             res.sendStatus(200);
         } catch (error) {
             log(`Failed to process player connected call due to error`, error);
+
+            res.sendStatus(404);
+        }
+    });
+
+    router.get('/check_discord', checkQueueName, async (req, res, next) => {
+        const id = req.query.steam;
+        const client = req.query.client;
+
+        try {
+            if (!id) {
+                throw new Error('No player steam id was given');
+            }
+
+            if (!client) {
+                throw new Error('No player client id was given');
+            }
+
+            const player = await Player.findBySteam(id);
+
+            if (!player) {
+                throw new Error(`No player found with it ${id}`);
+            }
+
+            const voiceChannel = player.discordMember.voiceChannelID;
+            const playerTeam = await player.team;
+            
+            log(`API Call for check_discord: ${req.queue.name} ${id}`);
+
+            if (playerTeam === "A" && voiceChannel === app.config.queues[req.queue.name].voiceChannelA) {
+                await req.queue.rconConn.send(`mx_ready_player ${client}`);
+                await req.queue.rconConn.send(`sm_psay ${player.discordUser.username} "Marked as ready!"`);
+ 
+                res.sendStatus(200);
+            } else if (playerTeam === "B" && voiceChannel === app.config.queues[req.queue.name].voiceChannelB) {
+                await req.queue.rconConn.send(`mx_ready_player ${client}`);
+                await req.queue.rconConn.send(`sm_psay ${player.discordUser.username} "Marked as ready!"`);
+ 
+                res.sendStatus(200);
+            } else {
+                await req.queue.rconConn.send(`sm_psay ${player.discordUser.username} "Please join your team's voice channel in discord and then use the !ready command."`);
+ 
+                res.sendStatus(200);
+            }
+        } catch (error) {
+            log(`Failed to process check discord call due to error`, error);
 
             res.sendStatus(404);
         }

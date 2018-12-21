@@ -1,4 +1,4 @@
-#define PLUGIN_VERSION  "1.0.3"
+#define PLUGIN_VERSION  "1.0.3.1"
 #define UPDATE_URL      ""
 #define TAG             "MIX"
 #define COLOR_TAG       "{matAmber}"
@@ -62,6 +62,7 @@ public OnPluginStart() {
     AddCommandListener(GameCommand_JoinTeam, "jointeam");
 
     Game_OnPluginLoad();
+    Ready_OnPluginLoad();
 
     SetStatus(STATE_FREE);
 }

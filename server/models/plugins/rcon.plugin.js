@@ -2,7 +2,6 @@ const log = require("debug")("app:models:plugins:rcon");
 
 module.exports = (schema, options) => {
     const app = options.app;
-    let cache = {};
 
     schema.virtual("rconConn").get(function () {
         return this.getRconConnection();
@@ -49,7 +48,7 @@ module.exports = (schema, options) => {
     }
 
     schema.statics.disconnectAllRconConnection = async function () {
-        await app.rcon.disconnectAll(this.ip, this.port);
+        await app.rcon.disconnectAll();
     }
 
     schema.virtual("isRconConnected").get(function () {

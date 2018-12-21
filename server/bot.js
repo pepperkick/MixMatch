@@ -136,24 +136,24 @@ module.exports = async (app) => {
             log(`Server ${queue.name} status is now waiting.`);
 
             await queue.discordRole.setName(`${queue.name}: Waiting (0/${format.size * 2})`);
-            await queue.sendDiscordMessage({ embed: {
-                color: 0x00BCD4,                            
-                title: 'Server is Ready',
-                description: `Join the server!`,
-                fields: [
-                    {
-                        name: "Connect",
-                        value: `steam://connect/${queue.ip}:${queue.port}`,
-                        inline: false
-                    },
-                    {
-                        name: "Map",
-                        value: queue.map,
-                        inline: false
-                    }
-                ],
-                timestamp: new Date()
-            }});
+            // await queue.sendDiscordMessage({ embed: {
+            //     color: 0x00BCD4,                            
+            //     title: 'Server is Ready',
+            //     description: `Join the server!`,
+            //     fields: [
+            //         {
+            //             name: "Connect",
+            //             value: `steam://connect/${queue.ip}:${queue.port}`,
+            //             inline: false
+            //         },
+            //         {
+            //             name: "Map",
+            //             value: queue.map,
+            //             inline: false
+            //         }
+            //     ],
+            //     timestamp: new Date()
+            // }});
         } else if (queue.status === Queue.status.LIVE) {
             await queue.discordRole.setName(`${queue.name}: Live`);  
         } else if (queue.status === Queue.status.ENDED) {
