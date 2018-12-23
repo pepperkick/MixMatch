@@ -1,4 +1,4 @@
-#define PLUGIN_VERSION  "1.0.3.1"
+#define PLUGIN_VERSION  "1.0.3.7"
 #define UPDATE_URL      ""
 #define TAG             "MIX"
 #define COLOR_TAG       "{matAmber}"
@@ -49,12 +49,14 @@ public OnPluginStart() {
     RegConsoleCmd("mx_init", Command_Init);
     RegConsoleCmd("mx_reset", Command_Reset); 
     RegConsoleCmd("mx_list_players", Command_ListPlayers);  
-    RegConsoleCmd("mx_add_player", Command_AddPlayer);  
+    RegConsoleCmd("mx_add_player", Command_AddPlayer);   
+    RegConsoleCmd("mx_get_player_client", Command_GetPlayerClient);  
     RegConsoleCmd("mx_set_map", Command_SetMap);    
     RegConsoleCmd("mx_set_format", Command_SetFormat); 
     RegConsoleCmd("mx_set_size", Command_SetSize); 
     RegConsoleCmd("mx_get_status", Command_GetStatus);  
-    RegConsoleCmd("mx_set_status", Command_SetStatus);  
+    RegConsoleCmd("mx_set_status", Command_SetStatus);   
+    RegConsoleCmd("mx_send_player_chat", Command_SendPlayerChat);  
     RegConsoleCmd("mx_version", Command_Version);
 
     HookEvent("player_changename", Event_NameChange, EventHookMode_Post);
@@ -209,6 +211,26 @@ public Action Command_AddPlayer(int client, int args) {
     return Plugin_Continue;
 }
 
+public Action Command_GetPlayerClient(int client, int args) {
+    char steam[128], auth[128];
+    
+    GetCmdArg(1, steam, sizeof(steam));
+
+    for (int i = 1; i <= MAX_PLAYERS; i++) {
+        if (!IsClientProper(i)) continue;
+
+        GetClientAuthId(i, AuthId_SteamID64, auth, sizeof(auth));
+
+        if (StrEqual(steam, auth, false)) {
+            PrintToServer("%d", i);
+
+            return;
+        }
+    }
+
+    PrintToServer("%d", -1);
+}
+
 public Action Command_SetMap(int client, int args) {
     char map[256];
     
@@ -256,13 +278,13 @@ public Action Command_SetStatus(int client, int args) {
 
     GetCmdArg(1, status, sizeof(status));
 
-    if (StrEqual(status, "free", false)) {
+    if (StrEqual(status, "FREE", false)) {
         SetStatus(STATE_FREE);
         PrintToServer("response::ok");
-    } else if (StrEqual(status, "setup", false)) {
+    } else if (StrEqual(status, "SETUP", false)) {
         SetStatus(STATE_SETUP);
         PrintToServer("response::ok");
-    } else if (StrEqual(status, "waiting", false)) {
+    } else if (StrEqual(status, "WAITING", false)) {
         SetStatus(STATE_WAITING);
         PrintToServer("response::ok");
     } else {
@@ -277,19 +299,19 @@ public Action Command_GetStatus(int client, int args) {
 
     switch(status) {
         case STATE_UNKNOWN: 
-            PrintToServer("unknown");
+            PrintToServer("UNKNOWN");
         case STATE_FREE: 
-            PrintToServer("free");
+            PrintToServer("FREE");
         case STATE_SETUP: 
-            PrintToServer("setup");
+            PrintToServer("SETUP");
         case STATE_WAITING: 
-            PrintToServer("waiting");
+            PrintToServer("WAITING");
         case STATE_LIVE: 
-            PrintToServer("live");
+            PrintToServer("LIVE");
         case STATE_END: 
-            PrintToServer("ended");
+            PrintToServer("ENDED");
         default: 
-            PrintToServer("error");
+            PrintToServer("ERROR");
     }
 
     return Plugin_Continue;
@@ -305,6 +327,17 @@ public Action Command_ListPlayers(int client, int args) {
 
         PrintToServer("%s %s %s", steam, name, team)
     }
+}
+
+public Action Command_SendPlayerChat(int client, int args) {
+    char client[128], msg[128];
+    int player;
+    
+    GetCmdArg(1, client, sizeof(client));
+    GetCmdArg(2, msg, sizeof(msg));
+    player = StringToInt(client, 10);
+
+    PrintToChat(player, "[%s] %s", TAG, msg);
 }
 
 public Action Command_Version(int client, int args) {
@@ -380,6 +413,10 @@ public void Reset(bool notify) {
             KickClient(i, "Server is being cleaned up, please check discord for more info");
         }
     }
+
+    #if defined GAME_CSGO
+        Game_Reset();
+    #endif
 
     SetStatus(STATE_FREE);
 }

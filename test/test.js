@@ -538,7 +538,7 @@ describe('API', function () {
 
             await this.Queue.save();
 
-            const response = await request(`http://${config.host}:${config.port}/plugin/status_change?name=${this.Queue.name}&status=free`);
+            const response = await request(`http://${config.host}:${config.port}/plugin/status_change?name=${this.Queue.name}&status=FREE`);
 
             assert(response.statusCode === 200, `Set status API call failed with status code ${response.statusCode}`);
         } catch (error) {

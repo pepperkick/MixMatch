@@ -35,6 +35,14 @@ module.exports = async (app) => {
         em.emit("newMember", member);
     });
 
+    bot.on("channelUpdate", (oldChannel, newChannel) => {
+        em.emit("channelUpdate", oldChannel, newChannel);
+    });
+
+    bot.on("voiceStateUpdate", (oldMember, newMember) => {
+        em.emit("voiceStateUpdate", oldMember, newMember);
+    });
+
     bot.on('error', async (error) => {
         if (error.code === "ECONNRESET") {
             log("Discord socket disconnected");

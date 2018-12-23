@@ -55,7 +55,7 @@ module.exports.init = async() => {
         }
         
         if (error.code === "ECONNRESET") {
-            Queue.disconnectAllRconConnection();
+            app.rcon.disconnectAll();
         }
         
         await generateErrorReport({
@@ -72,7 +72,7 @@ module.exports.init = async() => {
         if (reason.message.includes("Response timeout for packet id")) {
             log("RCON Error", reason.message);
 
-            Queue.disconnectAllRconConnection();
+            app.rcon.disconnectAll();
         }
 
         // await generateErrorReport({

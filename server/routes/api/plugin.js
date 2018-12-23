@@ -32,7 +32,7 @@ module.exports = (app) => {
     }
 
     router.get('/status_change', checkQueueName, async (req, res, next) => {
-        const status = req.query.status;
+        const status = req.query.status.toUpperCase();
 
         try {
             if (!status) {
@@ -120,28 +120,30 @@ module.exports = (app) => {
             }
 
             const voiceChannel = player.discordMember.voiceChannelID;
-            const playerTeam = await player.team;
+            const playerTeam = await player.server.team;
 
-            log(`API Call for check_discord: ${req.queue.name} ${id}`);
+            log(`API Call for player_ready: ${req.queue.name} ${id}`);
 
+            if (player.queue.status === Queue.status.WAITING);
+            else return log(`Ignored as server status is not WAITING`);
+    
             if (playerTeam === "A" && voiceChannel === app.config.queues[req.queue.name].voiceChannelA) {
                 await req.queue.rconConn.send(`mx_ready_player ${client}`);
-                await req.queue.rconConn.send(`sm_psay ${player.discordUser.username} "Marked as ready!"`);
+                await req.queue.rconConn.send(`mx_send_player_chat ${client} "Marked as ready!"`);
  
                 res.sendStatus(200);
             } else if (playerTeam === "B" && voiceChannel === app.config.queues[req.queue.name].voiceChannelB) {
                 await req.queue.rconConn.send(`mx_ready_player ${client}`);
-                await req.queue.rconConn.send(`sm_psay ${player.discordUser.username} "Marked as ready!"`);
+                await req.queue.rconConn.send(`mx_send_player_chat ${client} "Marked as ready!"`);
  
                 res.sendStatus(200);
             } else {
-                await req.queue.rconConn.send(`sm_psay ${player.discordUser.username} "Please join your team's voice channel in discord and then use the !ready command."`);
+                await req.queue.rconConn.send(`mx_send_player_chat ${client} "Please join your team's voice channel in discord and then use the !ready command."`);
  
                 res.sendStatus(200);
             }
         } catch (error) {
-            log(`Failed to process check discord call due to error`, error);
-
+            log(`Failed to process player ready call due to error`, error);
             res.sendStatus(404);
         }
     });

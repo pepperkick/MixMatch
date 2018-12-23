@@ -8,15 +8,15 @@ let cache = {};
 
 module.exports = (schema) => {
     const statuses = Object.freeze({
-        UNKNOWN: 'unknown',
-        OUTDATED: 'outdated',
-        FREE: 'free',
-        SETUP: 'setup',
-        WAITING: 'waiting',
-        LIVE: 'live',
-        ENDED: 'ended',
-        COOLDOWN: 'cooldown',
-        ERROR: 'error'
+        UNKNOWN: 'UNKNOWN',
+        OUTDATED: 'OUTDATED',
+        FREE: 'FREE',
+        SETUP: 'SETUP',
+        WAITING: 'WAITING',
+        LIVE: 'LIVE',
+        ENDED: 'ENDED',
+        COOLDOWN: 'COOLDOWN',
+        ERROR: 'ERROR'
     });
 
     schema.add({

@@ -1,7 +1,7 @@
 int playerCount = 0;
 int dummyRound = 0;
 
-Handle warmupTimer;
+Handle warmupTimer = INVALID_HANDLE;
 
 public void Game_OnPluginLoad() {
     HookEvent("cs_win_panel_match", Event_GameOver);
@@ -40,6 +40,13 @@ public void Game_OnPlayerConnectPost(int client) {
     StringMap parameters = new StringMap();
     parameters.SetString("id", steam);
     SendRequest("player_connected", parameters);
+}
+
+public void Game_Reset() {
+    playerCount = 0;
+    dummyRound = 0;
+
+    if (warmupTimer != INVALID_HANDLE) KillTimer(warmupTimer);
 }
 
 public Action Event_GameOver(Event event, const char[] name, bool dontBroadcast) {
@@ -95,5 +102,17 @@ public Action Timer_IncreaseWarmUp(Handle timer) {
         ServerCommand("mp_warmup_start");
         ServerCommand("bot_kick all");
         ServerCommand("bot_quota 0");
+
+        playerCount = 0;
     }
+
+    UpdateHudStatus();
 }  
+
+public void UpdateHudStatus() {
+    char msg[128];
+
+    Format(msg, sizeof(msg), "Players Ready\n %d / %d", CountReadyPlayers(), ServerTeamSize * 2);
+
+    PrintToHudAll(g_hoHud, msg);    
+}

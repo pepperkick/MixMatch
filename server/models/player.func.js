@@ -72,7 +72,7 @@ module.exports = (schema, app) => {
         this.model(this.constructor.modelName).emit('player_joined_queue', this);
     }
 
-    schema.virtual("team").get(async function () {
+    schema.virtual("server.team").get(async function () {
         if (!this.queue) return null;
 
         const player = await this.populate("queue").execPopulate();
@@ -90,5 +90,18 @@ module.exports = (schema, app) => {
         }
         
         return null;
+    });
+
+    schema.virtual("server.client").get(async function () {
+        if (!this.queue) return null;
+
+        const player = await this.populate("queue").execPopulate();
+        const result = await player.queue.rconConn.send(`mx_get_player_client ${player.steam}`);
+        
+        if (result.includes("\n")) {
+            return parseInt(result.split("\n")[0]);
+        }
+
+        return parseInt(result);
     });
 }

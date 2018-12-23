@@ -1,6 +1,8 @@
 const log = require('debug')('app:events:discord');
 
 module.exports = app => {    
+    const Queue = app.connection.model("Queue");
+    const Player = app.connection.model("Player");
     const Command = app.object.command;
     const Discord = app.discord;
 
@@ -45,6 +47,28 @@ module.exports = app => {
                 await message.reply(error.message);
             }
         }
+    });
+
+    Discord.on("voiceStateUpdate", async (oldMember, newMember) => {
+        const player = await Player.findByDiscord(newMember.id);
+
+        if (player.status === Player.status.CONNECTED);
+        else return;
+        
+        if (player.queue.status === Queue.status.WAITING);
+        else return;
+
+        const playerTeam = await player.server.team;
+        const playerClient = await player.server.client;
+        const voiceChannel = player.discordMember.voiceChannelID;
+        
+        if (playerTeam === "A" && voiceChannel !== app.config.queues[player.queue.name].voiceChannelA) {
+            await player.queue.rconConn.send(`mx_unready_player ${playerClient}`);
+            await player.queue.rconConn.send(`mx_send_player_chat ${playerClient} "You have left the team voice channel, you have been marked as unready. Please join the proper voice channel and use !ready command."`);
+        } else if (playerTeam === "B" && voiceChannel !== app.config.queues[player.queue.name].voiceChannelB) {
+            await player.queue.rconConn.send(`mx_unready_player ${playerClient}`);
+            await player.queue.rconConn.send(`mx_send_player_chat ${playerClient} "You have left the team voice channel, you have been marked as unready. Please join the proper voice channel and use !ready command."`);
+        } 
     });
 
     Discord.on("error", async (error) => {
