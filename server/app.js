@@ -55,7 +55,7 @@ module.exports.init = async() => {
         }
         
         if (error.code === "ECONNRESET") {
-            app.rcon.disconnectAll();
+            return app.rcon.disconnectAll();
         }
         
         await generateErrorReport({

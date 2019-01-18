@@ -60,7 +60,53 @@ module.exports = async (app) => {
             else {
                 await createNewQueue(name, queue_config);
             }
-        }
+
+            const queue = await Queue.findOne({ name });
+
+            if (!queue.discordChannel.children || queue.discordChannel.children.size !== 4) {
+                const guild = queue.getDiscordGuild();
+
+                if (queue.discordChannel.children) {
+                    queue.discordChannel.children.every(async function (channel) {
+                        await channel.delete();
+
+                        return true;
+                    });
+                }
+
+                let channel;
+
+                channel = await guild.createChannel("general", "text", [{
+                    id: app.config.discord.roles.player,
+                    allowed: [ 'SEND_MESSAGES' ]
+                }], `Queue ${queue.name} channel setup`);
+                await channel.setParent(queue.discordChannel);
+
+                channel = await guild.createChannel("General", "voice", [{
+                    id: queue_config.role,
+                    allowed: [ 'CONNECT' ]
+                }], `Queue ${queue.name} channel setup`);                
+                await channel.setParent(queue.discordChannel);
+
+                channel = await guild.createChannel(app.config.teams.A.name, "voice", [{
+                    id: app.config.teams.A.role,
+                    allowed: [ 'CONNECT' ]
+                }, {
+                    id: guild.id,
+                    denied: [ 'CONNECT' ]
+                }], `Queue ${queue.name} channel setup`);                
+                await channel.setParent(queue.discordChannel);
+
+                channel = await guild.createChannel(app.config.teams.B.name, "voice", [{
+                    id: app.config.teams.B.role,
+                    allowed: [ 'CONNECT' ]
+                }, {
+                    id: guild.id,
+                    denied: [ 'CONNECT' ]
+                }], `Queue ${queue.name} channel setup`);                
+                await channel.setParent(queue.discordChannel);
+            }
+        }        
     }
 
     function onQueueInit(queue) {  

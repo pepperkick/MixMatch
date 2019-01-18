@@ -51,24 +51,37 @@ module.exports = app => {
 
     Discord.on("voiceStateUpdate", async (oldMember, newMember) => {
         const player = await Player.findByDiscord(newMember.id);
-
-        if (player.status === Player.status.CONNECTED);
-        else return;
-        
-        if (player.queue.status === Queue.status.WAITING);
-        else return;
-
         const playerTeam = await player.server.team;
         const playerClient = await player.server.client;
         const voiceChannel = player.discordMember.voiceChannelID;
         
-        if (playerTeam === "A" && voiceChannel !== app.config.queues[player.queue.name].voiceChannelA) {
-            await player.queue.rconConn.send(`mx_unready_player ${playerClient}`);
-            await player.queue.rconConn.send(`mx_send_player_chat ${playerClient} "You have left the team voice channel, you have been marked as unready. Please join the proper voice channel and use !ready command."`);
-        } else if (playerTeam === "B" && voiceChannel !== app.config.queues[player.queue.name].voiceChannelB) {
-            await player.queue.rconConn.send(`mx_unready_player ${playerClient}`);
-            await player.queue.rconConn.send(`mx_send_player_chat ${playerClient} "You have left the team voice channel, you have been marked as unready. Please join the proper voice channel and use !ready command."`);
-        } 
+        // if (playerTeam === "A" && voiceChannel !== app.config.queues[player.queue.name].voiceChannelA) {
+        //     await player.queue.rconConn.send(`mx_unready_player ${playerClient}`);
+        //     await player.queue.rconConn.send(`mx_send_player_chat ${playerClient} "You have left the team voice channel, you have been marked as unready. Please join the proper voice channel and use !ready command."`);
+        // } else if (playerTeam === "B" && voiceChannel !== app.config.queues[player.queue.name].voiceChannelB) {
+        //     await player.queue.rconConn.send(`mx_unready_player ${playerClient}`);
+        //     await player.queue.rconConn.send(`mx_send_player_chat ${playerClient} "You have left the team voice channel, you have been marked as unready. Please join the proper voice channel and use !ready command."`);
+        // }
+
+        if (voiceChannel) {
+            for (const name in app.config.queues) {
+                const queue = await Queue.findOne({ name });
+
+                if (voiceChannel === queue.getDiscordVoiceChannel().id ||
+                    voiceChannel === queue.getDiscordTeamAChannel().id ||
+                    voiceChannel === queue.getDiscordTeamBChannel().id
+                ) {
+                    const queue = await Queue.findByName(name);
+
+                    await queue.addPlayer(player);
+
+                    log(`Joined ${queue.name}`);
+                }
+            }
+        } else {
+            if (player.status === Player.status.JOINED)
+                await player.queue.removePlayer(player);
+        }
     });
 
     Discord.on("error", async (error) => {

@@ -154,7 +154,7 @@ module.exports = (schema) => {
     }
 
     schema.methods.sendDiscordMessage = async function (options) {        
-        const message = await this.discordChannel.send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
+        const message = await this.getDiscordTextChannel().send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
       
         if (!message) {
             throw new Error(`Failed to send message to channel ${channel.id}`);
@@ -162,7 +162,7 @@ module.exports = (schema) => {
       
         return message;
     }
-    
+
     schema.methods.queryGameServer = async function () {
         return Gamedig.query({
             host: this.ip,
