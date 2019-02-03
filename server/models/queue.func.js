@@ -133,11 +133,11 @@ module.exports = (schema) => {
 
     schema.methods.sendDiscordMessage = async function (options) {        
         const message = await this.getDiscordTextChannel().send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
-      
+
         if (!message) {
             throw new Error(`Failed to send message to channel ${channel.id}`);
         }
-      
+
         return message;
     }
 }

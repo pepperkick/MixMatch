@@ -42,8 +42,8 @@ module.exports = (schema) => {
         return await this.findOne({ name });
     }
 
-    schema.statics.findByIp = async function (ip, port) {
-        return await this.findOne({ ip, port });
+    schema.statics.findByIp = async function (ip) {
+        return await this.findOne({ ip });
     }
 
     schema.statics.findFreeServer = async function () {
@@ -76,11 +76,11 @@ module.exports = (schema) => {
 
     schema.methods.sendDiscordMessage = async function (options) {        
         const message = await this.getDiscordTextChannel().send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
-      
+
         if (!message) {
             throw new Error(`Failed to send message to channel ${channel.id}`);
         }
-      
+
         return message;
     }
 
@@ -136,6 +136,11 @@ module.exports = (schema) => {
         }
     }
 
+    schema.methods.attachEvents = function () {
+        this.events.on("Log_onRCONCommand", log);
+        this.events.on("Log_onPlayerConnected", log);
+    }
+
     schema.post('init', async doc => {
         try {
             // TODO: Make status as virtual
@@ -144,6 +149,7 @@ module.exports = (schema) => {
 
             cache[`${doc.ip}:${doc.port}`] = true;
 
+            await doc.attachEvents();
             await doc.setStatus(statuses.UNKNOWN);
         } catch (error) {
             log(error);

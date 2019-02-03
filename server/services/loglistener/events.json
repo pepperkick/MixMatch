@@ -39,7 +39,7 @@
     },
     {
         "name": "onPlayerDisconnected",
-        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" disconnected (\"(.*?)\")",
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" disconnected \\(reason \"(.*?)\"\\)",
         "arguments": [ "name", "client", "steamId", "ip", "reason" ]
     }
 ]

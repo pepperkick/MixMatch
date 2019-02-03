@@ -6,11 +6,15 @@ const events = require("./events.json");
 const log = debug('app:service:log-listener');
 const em = new Event.EventEmitter();
 
-module.exports = (app) => {
+let Server;
+
+module.exports = app => {
+    Server = app.connection.model("Server");
+
     app.post("/log_listener", (req, res) => {
         const ip = req.connection.remoteAddress.split(`:`).pop();
 
-        req.on("data", (chunk) => {
+        req.on("data", async chunk => {
             let line = chunk.toString();            
             const lines = line.split("\n");
 
@@ -19,7 +23,7 @@ module.exports = (app) => {
 
                 lines[i] = `${ip} - ${lines[i]}`;
 
-                processLine(lines[i]);
+                await processLine(lines[i]);
             }
         });
 
@@ -32,7 +36,7 @@ module.exports = (app) => {
     return em;
 }
 
-function processLine(raw) {
+async function processLine(raw) {
     const line = {};
 
     try {
@@ -48,13 +52,15 @@ function processLine(raw) {
     
         em.emit("rawLine", line);
     
-        checkEvents(line);
+        await checkEvents(line);
     } catch (error) {
         log(error);
     }
 }
 
-function checkEvents(line) {
+async function checkEvents(line) {
+    const server = await Server.findByIp(line.server);
+
     events.forEach((event) => {
         const regex = new RegExp(event.line, 'i');
         const match = line.event.match(regex);
@@ -69,6 +75,11 @@ function checkEvents(line) {
 
             log(`Log Event fired: ${event.name}`);
             line.data = data;
+    
+            if (server) {
+                server.events.emit(`Log_${event.name}`, line);
+            }
+
             em.emit(event.name, line);
         }
     }, this);

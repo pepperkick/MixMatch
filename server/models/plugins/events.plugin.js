@@ -1,4 +1,4 @@
-module.exports = (schema, options) => {    
+module.exports = (schema, options) => {  
     schema.pre('save', function(next) {
         this._wasNew = this.isNew
         

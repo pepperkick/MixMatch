@@ -224,9 +224,10 @@ module.exports = async (app) => {
         try {
             if (await checkPluginVersion(server)) {     
                 log(`${server.name} plugin is up to date`);
-    
+
                 const server_status = await server.rconConn.send("mx_get_status");
     
+                await server.rconConn.send(`logaddress_add_http "http://${app.config.host}:${app.config.port}/log_listener"`);
                 await server.rconConn.send(`mx_init ${app.config.host} ${app.config.port} ${server.name}`);
     
                 if (server_status.includes(Server.status.SETUP)) {
