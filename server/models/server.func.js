@@ -137,8 +137,38 @@ module.exports = (schema) => {
     }
 
     schema.methods.attachEvents = function () {
-        this.events.on("Log_onRCONCommand", log);
-        this.events.on("Log_onPlayerConnected", log);
+        this.events.on("Log_onPlayerConnected", async data => {
+            const steam_id = data.data.steamId;
+            const client = data.data.client;
+
+            if (this.status === statuses.UNKNOWN) {
+                return await this.sourcemod.kick(client, "Server is not ready to accept connections");
+            } else if (this.status === statuses.FREE) {
+                return await this.sourcemod.kick(client, "No match is currently going on in this server");
+            } else if (this.status === statuses.SETUP) {
+                return await this.sourcemod.kick(client, "Please join back later as server is setting up");
+            } else if (this.status === statuses.WAITING) {
+            } else {
+                return await this.sourcemod.kick(client, "Unable to join currently");
+            }
+
+            const player = await this.model('Player').findBySteam(steam_id);
+
+            if (player) {
+                if (!this.checkIfPlayerAssigned(player)) {
+                    return await this.sourcemod.kick(client, "You cannot join this match");
+                }
+
+            } else {
+                return await this.sourcemod.kick(client, "You need to register with MixMatch to join the matches");
+            }
+        });
+    }
+
+    schema.methods.checkIfPlayerAssigned = function (player) {
+        if (player.server.id.toString() !== this.id.toString()) {
+            return false;
+        }
     }
 
     schema.post('init', async doc => {

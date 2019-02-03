@@ -251,7 +251,7 @@ module.exports = async (app) => {
     
                 await server.setStatus(Server.status.OUTDATED);
     
-                setTimeout(() => onServerRconConnected(server), 10000);
+                // setTimeout(() => onServerRconConnected(server), 10000);
             }
         } catch (error) {
             log(`Failed to get plugin version for server ${server.name}`, error);
