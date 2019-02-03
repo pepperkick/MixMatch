@@ -72,19 +72,19 @@ module.exports = (schema, app) => {
         this.model(this.constructor.modelName).emit('player_joined_queue', this);
     }
 
-    schema.virtual("server.team").get(async function () {
-        if (!this.queue) return null;
+    schema.virtual("match.team").get(async function () {
+        if (!this.server) return null;
 
-        const player = await this.populate("queue").execPopulate();
+        const player = await this.populate("server").execPopulate();
 
-        for (let i in player.queue.teamA) {
-            if (player.queue.teamA[i].toString() == player.id) {
+        for (let i in player.server.teamA) {
+            if (player.server.teamA[i].toString() == player.id) {
                 return "A"
             }
         }
 
-        for (let i in player.queue.teamB) {
-            if (player.queue.teamB[i].toString() == player.id) {
+        for (let i in player.server.teamB) {
+            if (player.server.teamB[i].toString() == player.id) {
                 return "B"
             }
         }
@@ -92,11 +92,11 @@ module.exports = (schema, app) => {
         return null;
     });
 
-    schema.virtual("server.client").get(async function () {
-        if (!this.queue) return null;
+    schema.virtual("match.client").get(async function () {
+        if (!this.server) return null;
 
-        const player = await this.populate("queue").execPopulate();
-        const result = await player.queue.rconConn.send(`mx_get_player_client ${player.steam}`);
+        const player = await this.populate("server").execPopulate();
+        const result = await player.server.rconConn.send(`mx_get_player_client ${player.steam}`);
         
         if (result.includes("\n")) {
             return parseInt(result.split("\n")[0]);

@@ -1,6 +1,7 @@
 const express = require('express');
 const servgen = require('@abskmj/servgen');
 const debug = require('debug');
+const bodyParser = require('body-parser');
 
 const bot  = require('./bot');
 
@@ -25,6 +26,10 @@ module.exports.init = async() => {
     
     // attach routes
     app.use(router(app));
+    app.use(bodyParser.json());
+    app.use(bodyParser.urlencoded({
+        extended: true
+    })); 
     
     app.listen(app.config.port);
     
@@ -38,9 +43,9 @@ module.exports.init = async() => {
             const queue = await Queue.findByIp(error.address, error.port);
 
             if (queue) {
-                 setTimeout(() => queue.setStatus(Queue.status.UNKNOWN), 30000);
-                 
-                 return;
+                setTimeout(() => queue.setStatus(Queue.status.UNKNOWN), 30000);
+                
+                return;
             }
         }
         
@@ -48,9 +53,9 @@ module.exports.init = async() => {
             const queue = await Queue.findByIp(error.address, error.port);
 
             if (queue) {
-                 setTimeout(() => queue.setStatus(Queue.status.UNKNOWN), 30000);
-                 
-                 return;
+                setTimeout(() => queue.setStatus(Queue.status.UNKNOWN), 30000);
+                
+                return;
             }
         }
         

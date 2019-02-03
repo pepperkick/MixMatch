@@ -50,9 +50,10 @@ module.exports = app => {
     });
 
     Discord.on("voiceStateUpdate", async (oldMember, newMember) => {
-        const player = await Player.findByDiscord(newMember.id);
-        const playerTeam = await player.server.team;
-        const playerClient = await player.server.client;
+        let player = await Player.findByDiscord(newMember.id);
+        player = await player.populate("queue").execPopulate();
+        // const playerTeam = await player.server.team;
+        // const playerClient = await player.server.client;
         const voiceChannel = player.discordMember.voiceChannelID;
         
         // if (playerTeam === "A" && voiceChannel !== app.config.queues[player.queue.name].voiceChannelA) {
@@ -65,12 +66,7 @@ module.exports = app => {
 
         if (voiceChannel) {
             for (const name in app.config.queues) {
-                const queue = await Queue.findOne({ name });
-
-                if (voiceChannel === queue.getDiscordVoiceChannel().id ||
-                    voiceChannel === queue.getDiscordTeamAChannel().id ||
-                    voiceChannel === queue.getDiscordTeamBChannel().id
-                ) {
+                if (voiceChannel === app.config.queues[name].channel) {
                     const queue = await Queue.findByName(name);
 
                     await queue.addPlayer(player);

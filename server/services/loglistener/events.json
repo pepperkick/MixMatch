@@ -1,0 +1,45 @@
+[
+    {
+        "name": "onServerCvarChange",
+        "line": "server_cvar: \"(.*?)\" \"(.*?)\"",
+        "arguments": [ "name", "value" ]
+    },
+    {
+        "name": "onMapChange",
+        "line": "Started map \"(.*?)\" \\(CRC \"(.*?)\"\\)",
+        "arguments": [ "map", "crc" ]
+    },
+    {
+        "name": "onRoundStart",
+        "line": "World triggered \"Round_Start\""
+    },
+    {
+        "name": "onRoundDraw",
+        "line": "World triggered \"Round_Stalemate\""
+    },
+    {
+        "name": "onRoundEnd",
+        "line": "World triggered \"Game_Over\" reason \"(.*?)\"",
+        "arguments": [ "reason" ]
+    },
+    {
+        "name": "onRCONCommand",
+        "line": "rcon from \"(.*?)\": command \"(.*?)\"",
+        "arguments": [ "ip", "command" ]
+    },
+    {
+        "name": "onPlayerConnected",
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" connected, address \"(.*?)\"",
+        "arguments": [ "name", "client", "steamId", "ip", "address" ]
+    },
+    {
+        "name": "onPlayerConnected",
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" STEAM USERID validated",
+        "arguments": [ "name", "client", "steamId", "ip" ]
+    },
+    {
+        "name": "onPlayerDisconnected",
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" disconnected (\"(.*?)\")",
+        "arguments": [ "name", "client", "steamId", "ip", "reason" ]
+    }
+]

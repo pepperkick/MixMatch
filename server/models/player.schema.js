@@ -14,6 +14,11 @@ module.exports = {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Queue',
             default: null
+        },
+        server: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Server',
+            default: null
         }
     },
     options: {

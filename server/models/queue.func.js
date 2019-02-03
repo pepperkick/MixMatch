@@ -1,37 +1,19 @@
-const Gamedig = require('gamedig');
-
 const Exception = require("../objects/exception");
 
 const log = require('debug')('app:models:queue');
 
-let cache = {};
-
 module.exports = (schema) => {
     const statuses = Object.freeze({
-        UNKNOWN: 'UNKNOWN',
-        OUTDATED: 'OUTDATED',
         FREE: 'FREE',
-        SETUP: 'SETUP',
-        WAITING: 'WAITING',
-        LIVE: 'LIVE',
-        ENDED: 'ENDED',
-        COOLDOWN: 'COOLDOWN',
-        ERROR: 'ERROR'
+        ASSIGNING: 'ASSIGNING',
+        BLOCKED: 'BLOCKED'
     });
 
     schema.add({
         status: {
             type: String,
             enum: Object.values(statuses),
-            default: statuses.UNKNOWN
-        },
-        teamA: {
-            type: Array,
-            default: []
-        },
-        teamB: {
-            type: Array,
-            default: []
+            default: statuses.FREE
         }
     });
 
@@ -41,16 +23,12 @@ module.exports = (schema) => {
         return await this.findOne({ name });
     }
 
-    schema.statics.findByIp = async function (ip, port) {
-        return await this.findOne({ ip, port });
-    }
-
     schema.methods.setStatus = async function (status) {
         this.status = status;
         
         await this.save();
         
-        log(`${this.name}'s status changed to ${this.status}`);
+        log(`Queue ${this.name}'s status changed to ${this.status}`);
     }
 
     schema.methods.isFree = function () {
@@ -162,26 +140,4 @@ module.exports = (schema) => {
       
         return message;
     }
-
-    schema.methods.queryGameServer = async function () {
-        return Gamedig.query({
-            host: this.ip,
-            port: this.port,
-            type: 'tf2'
-        })
-    }
-
-    schema.post('init', async doc => {
-        try {
-            // TODO: Make status as virtual
-
-            if (cache[`${doc.ip}:${doc.port}`]) return;
-
-            cache[`${doc.ip}:${doc.port}`] = true;
-
-            await doc.setStatus(statuses.UNKNOWN);
-        } catch (error) {
-            log(error);
-        }
-    });
 }
