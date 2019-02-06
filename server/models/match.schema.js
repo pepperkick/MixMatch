@@ -1,20 +1,21 @@
 const mongoose = require('mongoose');
 
 module.exports = {
-    name: "Player",
+    name: "Match",
     plugins: {
         "@abskmj/mongoose-plugin-timestamps": true,
-        events: true,
-        "discord.user": true
+        events: true
     },
     schema: {
-        steam: String,
-        discord: String,
-        queue: {
+        players: {
+            type: Object
+        },
+        server: [{
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Queue',
-            default: null
-        }
+            ref: "Server"
+        }],
+        format: String,
+        map: String
     },
     options: {
         versionKey: false

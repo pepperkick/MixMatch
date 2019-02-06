@@ -1,3 +1,5 @@
+const fs = require('fs');
+const readline = require('readline');
 const Gamedig = require('gamedig');
 
 const Exception = require("../objects/exception");
@@ -25,14 +27,6 @@ module.exports = (schema) => {
             type: String,
             enum: Object.values(statuses),
             default: statuses.UNKNOWN
-        },
-        teamA: {
-            type: Array,
-            default: []
-        },
-        teamB: {
-            type: Array,
-            default: []
         }
     });
 
@@ -48,8 +42,6 @@ module.exports = (schema) => {
 
     schema.statics.findFreeServer = async function () {
         const server = await this.findOne({ status: statuses.FREE });        
-    
-        if (!server) throw new Error("No free server found");
 
         return server;
     }
@@ -62,16 +54,41 @@ module.exports = (schema) => {
         log(`Server ${this.name}'s status changed to ${this.status}`);
     }
 
-    schema.methods.setFormat = async function (format) {
-        this.format = format;
+    schema.methods.execConfig = async function (config) {
+        log(`Executing Local ${config}.cfg`);
 
-        await this.save();
+        const fileStream = fs.createReadStream(`${__dirname}/../cfgs/${config}.cfg`);
 
-        log(`Server ${this.name}'s format changed to ${this.format}`);
+        const rl = readline.createInterface({
+            input: fileStream,
+            crlfDelay: Infinity
+        });
+
+        rl.on('line', async line => {
+            if (line === "") return;
+            if (line.indexOf("//") === 0) return;
+
+            if (line.split("//").length > 1) {
+                line = line.split("//")[0];
+            }
+
+            await this.rconConn.send(line);
+        });
     }
 
     schema.methods.isFree = function () {
         return this.status === statuses.FREE;
+    }
+
+    schema.methods.findCurrentMatch = async function () {
+        const Match = await this.model('Match');
+        const matches = await Match.find({ status: { $in: [ Match.status.SETUP, Match.status.WAITING, Match.status.LIVE ] }, server: this });
+
+        if (matches.length > 0) {
+            return matches[0];
+        }
+
+        return null;
     }
 
     schema.methods.sendDiscordMessage = async function (options) {        
@@ -137,9 +154,34 @@ module.exports = (schema) => {
     }
 
     schema.methods.attachEvents = function () {
+        this.events.on("Log_onMapChange", async data => {
+            const { map } = data.data;
+            const match = await this.findCurrentMatch();
+
+            if (match) {
+                if (match.status === Match.status.SETUP && match.map === map) {
+                    match.status = Match.status.WAITING;
+
+                    await match.save();
+                } else if (match.status === Match.status.WAITING && match.map !== map) {
+                    match.status = Match.status.SETUP;
+
+                    await match.save();
+                } else if (match.status === Match.status.LIVE && match.map !== map) {
+                    match.status = Match.status.ERROR;
+
+                    await match.save();
+
+                    throw new Error("Map changed mid live match");
+                }
+            }
+        });
+
         this.events.on("Log_onPlayerConnected", async data => {
-            const steam_id = data.data.steamId;
-            const client = data.data.client;
+            const { steam_id, client } = data.data;
+
+            log(this.status);
+            return;
 
             if (this.status === statuses.UNKNOWN) {
                 return await this.sourcemod.kick(client, "Server is not ready to accept connections");

@@ -31,6 +31,14 @@ module.exports = (schema) => {
         log(`Queue ${this.name}'s status changed to ${this.status}`);
     }
 
+    schema.methods.setFormat = async function (format) {
+        this.format = format;
+
+        await this.save();
+
+        log(`Queue ${this.name}'s format changed to ${this.format}`);
+    }
+
     schema.methods.isFree = function () {
         return this.status === statuses.FREE;
     }
@@ -93,25 +101,13 @@ module.exports = (schema) => {
     }
     
     schema.methods.reset = async function () {
-        await this.setStatus(statuses.COOLDOWN);
+        await this.setStatus(statuses.BLOCKED);
 
         for (const player of this.players) {
             await this.removePlayer(player, true);
         }
 
-        for (const player of this.teamA) {
-            await this.removePlayer(player, true);
-        }
-
-        for (const player of this.teamB) {
-            await this.removePlayer(player, true);
-        }
-
-        this.teamA = [];
-        this.teamB = [];
-        
         await this.save();
-        await this.rconConn.send("mx_reset");
     }
 
     schema.methods.changeFormat = async function (format) {

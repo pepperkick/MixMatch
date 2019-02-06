@@ -20,8 +20,7 @@ module.exports = {
         rcon: String,
         channel: String,
         format: String,
-        role: String,
-        map: String
+        role: String
     },
     options: {
         versionKey: false

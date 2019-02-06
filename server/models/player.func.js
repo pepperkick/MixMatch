@@ -73,34 +73,14 @@ module.exports = (schema, app) => {
     }
 
     schema.virtual("match.team").get(async function () {
-        if (!this.server) return null;
-
-        const player = await this.populate("server").execPopulate();
-
-        for (let i in player.server.teamA) {
-            if (player.server.teamA[i].toString() == player.id) {
-                return "A"
-            }
-        }
-
-        for (let i in player.server.teamB) {
-            if (player.server.teamB[i].toString() == player.id) {
-                return "B"
-            }
-        }
+        // TODO: Update this
         
         return null;
     });
 
     schema.virtual("match.client").get(async function () {
-        if (!this.server) return null;
-
-        const player = await this.populate("server").execPopulate();
-        const result = await player.server.rconConn.send(`mx_get_player_client ${player.steam}`);
+        // TODO: Update this
         
-        if (result.includes("\n")) {
-            return parseInt(result.split("\n")[0]);
-        }
 
         return parseInt(result);
     });

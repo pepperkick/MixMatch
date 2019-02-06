@@ -28,18 +28,43 @@
         "arguments": [ "ip", "command" ]
     },
     {
-        "name": "onPlayerConnected",
+        "name": "onPlayerConnectedEx",
         "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" connected, address \"(.*?)\"",
-        "arguments": [ "name", "client", "steamId", "ip", "address" ]
+        "arguments": [ "name", "client", "steamId", "team", "address" ]
+    },
+    {
+        "name": "onPlayerConnectedEx",
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" STEAM USERID validated",
+        "arguments": [ "name", "client", "steamId", "team" ]
     },
     {
         "name": "onPlayerConnected",
-        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" STEAM USERID validated",
-        "arguments": [ "name", "client", "steamId", "ip" ]
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" entered the game",
+        "arguments": [ "name", "client", "steamId", "team" ]
     },
     {
         "name": "onPlayerDisconnected",
         "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" disconnected \\(reason \"(.*?)\"\\)",
-        "arguments": [ "name", "client", "steamId", "ip", "reason" ]
+        "arguments": [ "name", "client", "steamId", "team", "reason" ]
+    },
+    {
+        "name": "onKill",
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] killed \"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] with \"(.*?)\"",
+        "arguments": [ "name", "client", "steamId", "team", "killerX", "killerY", "killerZ", "victim_name", "victim_client", "victim_steamId", "victim_team", "weapnn" ]
+    },
+    {
+        "name": "onKillWithHeadshot",
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] killed \"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] with \"(.*?)\" \\(headshot\\)",
+        "arguments": [ "name", "client", "steamId", "team", "killerX", "killerY", "killerZ", "victim_name", "victim_client", "victim_steamId", "victim_team", "weapnn" ]
+    },
+    {
+        "name": "onBombPlanted",
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" triggered \"Planted_The_Bomb\"",
+        "arguments": [ "name", "client", "steamId", "team" ]
+    },
+    {
+        "name": "onBombDefused",
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" triggered \"Defused_The_Bomb\"",
+        "arguments": [ "name", "client", "steamId", "team" ]
     }
 ]

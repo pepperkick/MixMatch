@@ -43,7 +43,7 @@ async function processLine(raw) {
         line.date = raw.match(/[0-3][0-9].[0-1][0-9].[2][0][0-9][0-9]/)[0];
         line.time = raw.match(/[0-2][0-9]:[0-9][0-9]:[0-9][0-9]/)[0];
         line.event = raw.split(' - ')[3];
-        line.server = raw.split(" - ")[0];
+        line.ip = raw.split(" - ")[0];
         line.raw = raw;
     
         if (!line.date || !line.time || !line.raw) {
@@ -59,7 +59,7 @@ async function processLine(raw) {
 }
 
 async function checkEvents(line) {
-    const server = await Server.findByIp(line.server);
+    const server = await Server.findByIp(line.ip);
 
     events.forEach((event) => {
         const regex = new RegExp(event.line, 'i');
