@@ -11,14 +11,8 @@ let cache = {};
 module.exports = (schema) => {
     const statuses = Object.freeze({
         UNKNOWN: 'UNKNOWN',
-        OUTDATED: 'OUTDATED',
         FREE: 'FREE',
         RESERVED: 'RESERVED',
-        SETUP: 'SETUP',
-        WAITING: 'WAITING',
-        LIVE: 'LIVE',
-        ENDED: 'ENDED',
-        COOLDOWN: 'COOLDOWN',
         ERROR: 'ERROR'
     });
 

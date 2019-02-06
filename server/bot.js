@@ -118,7 +118,7 @@ module.exports = async (app) => {
                 log(`Enough players have joined ${queue.name}, finding a free server.`);
                 
                 const server = await Server.findFreeServer();
-                const players = await divideTeams(queue, format); 
+                const players = await divideTeams(queue, server, format); 
                 const map = format.maps[Math.floor(Math.random() * format.maps.length)];
                 const match = new Match({
                     status: Match.status.SETUP,
@@ -164,6 +164,7 @@ module.exports = async (app) => {
         if (match.status === Match.status.SETUP) {
             const server = match.server;
 
+            await server.setStatus(Server.status.RESERVED);
             await server.rconConn.send(`changelevel ${match.map}`)
             await server.execConfig(format.config);
             await server.createDiscordChannel();
@@ -171,11 +172,31 @@ module.exports = async (app) => {
             await server.save();
         } else if (match.status === Match.status.WAITING) {
             await server.discordRole.setName(`${server.name}: Waiting (0/${format.size * 2})`);
+        } else if (match.status === Match.status.LIVE) {
+            await server.discordRole.setName(`${server.name}: Live`);
+        } else if (match.status === Match.status.ENDED) {
+            await server.discordRole.setName(`${server.name}: Ended`);      
+            await server.setStatus(Server.status.FREE);  
+
+            for await (let player of match.players) {
+                await player.discordMember.removeRole(app.config.teams.A.role);
+                await player.discordMember.removeRole(app.config.teams.B.role);
+                await player.discordMember.removeRole(server.role);
+            }
         }
     }
 
     async function onServerUpdate(server) {        
         // TODO: Update this
+
+        if (server.status === Server.status.UNKNOWN) {
+            const match = await server.findCurrentMatch();
+
+            if (match) server.setStatus(Server.status.RESERVED);
+            else server.setStatus(Server.status.FREE);
+        } else if (server.status === Server.status.FREE) {
+            await server.discordRole.setName(`${server.name}: Free`);
+        }
     }
 
     async function onServerRconConnected(server) {         
@@ -566,11 +587,12 @@ module.exports = async (app) => {
         }
     }
 
-    async function divideTeams(queue, format) {      
+    async function divideTeams(queue, server, format) {      
         const players = {};
 
         for (let i = 0; i < format.size * 2; i++) {
             const player = await Player.findById(queue.players.pop());
+            await player.discordMember.addRole(server.role);
 
             if (i % 2 === 0) {
                 players[player.id] = {
