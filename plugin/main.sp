@@ -46,8 +46,8 @@ public OnPluginStart() {
     // Attach HUD
     g_hoHud = HudInit(127, 255, 127);
 
-    RegConsoleCmd("mx_init", Command_Init);
-    RegConsoleCmd("mx_reset", Command_Reset); 
+    // RegConsoleCmd("mx_init", Command_Init);
+    // RegConsoleCmd("mx_reset", Command_Reset); 
     RegConsoleCmd("mx_list_players", Command_ListPlayers);  
     RegConsoleCmd("mx_add_player", Command_AddPlayer);   
     RegConsoleCmd("mx_get_player_client", Command_GetPlayerClient);  
@@ -142,31 +142,33 @@ public void OnMapEnd() {
     Game_OnMapEnd();
 }
 
-public Action Command_Init(int client, int args) {
-    char ip[128], port[128], server_name[128];
+// TODO: Remve this function
+// public Action Command_Init(int client, int args) {
+//     char ip[128], port[128], server_name[128];
 
-    GetCmdArg(1, ip, sizeof(ip));
-    GetCmdArg(2, port, sizeof(port));
-    GetCmdArg(3, server_name, sizeof(server_name));
+//     GetCmdArg(1, ip, sizeof(ip));
+//     GetCmdArg(2, port, sizeof(port));
+//     GetCmdArg(3, server_name, sizeof(server_name));
 
-    Format(HostIP, sizeof(HostIP), "%s", ip);
-    Format(HostPort, sizeof(HostPort), "%s", port);
-    Format(ServerName, sizeof(ServerName), "%s", server_name);
+//     Format(HostIP, sizeof(HostIP), "%s", ip);
+//     Format(HostPort, sizeof(HostPort), "%s", port);
+//     Format(ServerName, sizeof(ServerName), "%s", server_name);
 
-    PrintToServer("response::ok");
+//     PrintToServer("response::ok");
 
-    Log("Plugin initialized with following settings (IP: %s, Porst: %s, Name: %s)", HostIP, HostPort, ServerName);
+//     Log("Plugin initialized with following settings (IP: %s, Porst: %s, Name: %s)", HostIP, HostPort, ServerName);
 
-    return Plugin_Continue;
-}
+//     return Plugin_Continue;
+// }
 
-public Action Command_Reset(int client, int args) {
-    Reset(false);
+// TODO: Remve this function
+// public Action Command_Reset(int client, int args) {
+//     Reset(false);
 
-    PrintToServer("response::ok");
+//     PrintToServer("response::ok");
 
-    return Plugin_Continue;
-}
+//     return Plugin_Continue;
+// }
 
 public Action Command_AddPlayer(int client, int args) {
     char steam[128], team[4], name[128];

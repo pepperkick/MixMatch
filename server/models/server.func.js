@@ -175,6 +175,7 @@ module.exports = (schema) => {
             const { steam_id, client } = data.data;
 
             log(this.status);
+            
             return;
 
             if (this.status === statuses.UNKNOWN) {

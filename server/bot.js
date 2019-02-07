@@ -90,6 +90,10 @@ module.exports = async (app) => {
             else {
                 await createNewServer(name, server_config);
             }
+
+            log(`Connecting to RCON for server ${server_in_db.name}`);
+            
+            await server_in_db.createRconConnection();
         }
     }
 
@@ -208,6 +212,8 @@ module.exports = async (app) => {
             // TODO: Update this
 
             await server.rconConn.send(`logaddress_add_http "http://${app.config.host}:${app.config.port}/log_listener"`);
+
+            log("RCON Init command sent");
         } catch (error) {
             log(`Failed to get plugin version for server ${server.name}`, error);
 
