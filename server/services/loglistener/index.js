@@ -54,7 +54,7 @@ async function processLine(raw) {
     
         await checkEvents(line);
     } catch (error) {
-        log(error);
+        log("Error processing line", error);
     }
 }
 

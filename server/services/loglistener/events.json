@@ -53,6 +53,11 @@
         "arguments": [ "name", "client", "steamId", "team", "killerX", "killerY", "killerZ", "victim_name", "victim_client", "victim_steamId", "victim_team", "weapnn" ]
     },
     {
+        "name": "onKill",
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] killed \"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] with \"(.*?)\" \\(headshot\\)",
+        "arguments": [ "name", "client", "steamId", "team", "killerX", "killerY", "killerZ", "victim_name", "victim_client", "victim_steamId", "victim_team", "weapnn" ]
+    },
+    {
         "name": "onKillWithHeadshot",
         "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] killed \"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] with \"(.*?)\" \\(headshot\\)",
         "arguments": [ "name", "client", "steamId", "team", "killerX", "killerY", "killerZ", "victim_name", "victim_client", "victim_steamId", "victim_team", "weapnn" ]
