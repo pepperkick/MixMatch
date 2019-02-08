@@ -303,92 +303,6 @@ module.exports = async (app) => {
         }, async (args) => {
             await resetQueue(args, queue)
         });
-
-        registerCommand({ 
-            command: 'remove',
-            channel: queue.channel,
-            role: [ app.config.discord.roles.admin ]
-        }, async (args) => {
-            if (args.parameters.length === 1) return await args.message.reply(`\nUsage: \`!remove <user id>\``);    
-
-            for (let i in args.parameters) {
-                if (i == 0) continue;
-
-                const id = args.parameters[i];
-    
-                await removePlayerQueue(args, queue, id, true)
-            }            
-        });
-    }
-
-    async function addPlayerQueue(args, queue, player_id, admin=false) {
-        let player;
-
-        try {
-            queue = await Queue.findById(queue.id);
-            player = await Player.findByDiscord(player_id);
-            
-            await queue.addPlayer(player);         
-
-            if(admin) await args.message.reply(`Successfully added ${player.discordUser.username} to the queue.`);
-            else await args.message.reply('You have successfully joined the queue.');
-        } catch (error) {
-            log(`Failed to add player ${player_id} to Queue ${queue.name}`);
-
-            if (error.code === "QUEUE_NOT_FREE") {
-                if (admin) await args.message.reply("Cannot add player at the moment.");
-                else await args.message.reply("Cannot join the queue at the moment.");
-            } else if (error.code === "PLAYER_ALREADY_IN_CURRENT_QUEUE") {      
-                if (admin) await args.message.reply(`"${player.discordUser.username}" is already in current queue.`);          
-                else await args.message.reply("You have already joined this queue.");
-            } else if (error.code === "PLAYER_ALREADY_IN_QUEUE") {
-                if (admin) await args.message.reply(`"${player.discordUser.username}" is already in another queue.`);        
-                else await args.message.reply("You have already joined a queue.");
-            } else if (error.code === "PLAYER_NOT_FOUND") {
-                if (admin) await args.message.reply(`"${player.discordUser.username}" not found.`);        
-                else await args.message.reply('Unable to process your request, please make sure that you have registered with the bot');
-            } else {
-                if (admin) await args.message.reply(`Failed to add ${player.discordUser.username} to queue.`);   
-                else await args.message.reply('Failed due to internal error, please try again later.');
-            }
-            
-            log(error);
-        }
-    }
-
-    async function removePlayerQueue(args, queue, player_id, admin=false) {
-        let player;
-
-        try {
-            queue = await Queue.findById(queue.id);
-            player = await Player.findByDiscord(player_id);
-
-            await queue.removePlayer(player);            
-
-            if(admin) await args.message.reply(`Successfully removed ${player.discordUser.username} from the queue.`);
-            else await args.message.reply('You have successfully left the queue');
-        } catch (error) {
-            log(`Failed to remove player ${player_id} from Queue ${queue.name}`);
-
-            if (error.code === "QUEUE_NOT_FREE") {
-                if (admin) await args.message.reply(`Cannot remove player at the moment.`);    
-                else await args.message.reply("Cannot leave the queue at the moment.");
-            }else if (error.code === "PLAYER_NOT_IN_CURRENT_QUEUE") {                
-                if (admin) await args.message.reply(`"${player.discordUser.username}" is not in current queue.`);    
-                else await args.message.reply("You have not joined this queue.");
-            } else if (error.code === "PLAYER_NOT_IN_QUEUE") {
-                if (admin) await args.message.reply(`"${player.discordUser.username}" is not in any queue.`);    
-                else await args.message.reply("You have not joined any queue.");
-            } else if (error.code === "PLAYER_NOT_FOUND") {
-                if (admin) await args.message.reply(`"${player.discordUser.username}" not found.`);        
-                else await args.message.reply('Unable to process your request, please make sure that you have registered with the bot');
-            } else {
-                if (admin) await args.message.reply(`Failed to remove "${player.discordUser.username}" to queue.`);   
-                else await args.message.reply('Failed due to internal error, please try again later.');
-            }
-            
-            log(error);
-        }
     }
 
     async function changeQueueFormat(args, queue) {
@@ -615,6 +529,7 @@ module.exports = async (app) => {
             }
             
             await queue.removePlayer(player);
+            await queue.rconConn.send(`mx_add_player ${player.steam} ${i%2} "${player.getDiscordUser().username}"`);
 
             return players;
         }
@@ -630,10 +545,5 @@ module.exports = async (app) => {
                 throw error;
             }
         }
-    }
-
-    async function checkPluginVersion(queue) {
-        const version = await queue.rconConn.send('mx_version');
-        return version.includes(app.config.plugin.version);
     }
 };
