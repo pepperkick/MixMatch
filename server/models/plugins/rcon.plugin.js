@@ -34,8 +34,8 @@ module.exports = (schema, options) => {
         });
 
         if (stack[this.id.toString()]) {
-            for await (let cmd of stack[this.id.toString()]) {
-                await this.sendCommand(cmd);
+            for (let i in stack[this.id.toString()]) {
+                await this.sendCommand(stack[this.id.toString()][i]);
             }
 
             delete stack[this.id.toString()];

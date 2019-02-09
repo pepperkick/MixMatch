@@ -25,8 +25,8 @@ module.exports = (schema) => {
     schema.statics.isPlayerAssigned = async function (id) {
         const matches = this.find({ status: statuses.WAITING });
 
-        for await (let match of matches) {
-            if (await match.isPlayerIn(id)) return match;
+        for (let i in matches) {
+            if (await matches[i].isPlayerIn(id)) return match;
         }
 
         return null;
@@ -35,8 +35,8 @@ module.exports = (schema) => {
     schema.statics.isPlayerPlaying = async function (id) {
         const matches = this.find({ status: statuses.LIVE });
 
-        for await (let match of matches) {
-            if (await match.isPlayerIn(id)) return match;
+        for (let i in matches) {
+            if (await matches[i].isPlayerIn(id)) return match;
         }
 
         return null;
@@ -56,14 +56,21 @@ module.exports = (schema) => {
     }
 
     schema.methods.handleMapChange = async function (event) {
+        const Server = await this.model('Server');
+        const formats_config = this.getConfigValue(`formats`);
+        const format = formats_config[this.format];
         const { map } = event.data;
 
         if (this.status === statuses.SETUP && this.map === map) {
-            await match.setStatus(statuses.WAITING);
+            const server = await Server.findById(this.server);
+
+            await server.execConfig(format.config);
+
+            await this.setStatus(statuses.WAITING);
         } else if (this.status === statuses.WAITING && this.map !== map) {
-            await match.setStatus(statuses.SETUP);
+            await this.setStatus(statuses.SETUP);
         } else if (this.status === statuses.LIVE && this.map !== map) {
-            await match.setStatus(statuses.ERROR);
+            await this.setStatus(statuses.ERROR);
 
             throw new Error("Map changed in the middle of a live match");
         }

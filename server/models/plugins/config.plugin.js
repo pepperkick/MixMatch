@@ -6,4 +6,10 @@ module.exports = (schema, options) => {
 
         return app.config[key];
     }
+
+    schema.methods.getConfig = function () {
+        if (!app.config) throw new Error("Config service is not attached to app");
+
+        return app.config;
+    }
 }

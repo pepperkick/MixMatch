@@ -4,7 +4,8 @@ module.exports = {
     name: "Match",
     plugins: {
         "@abskmj/mongoose-plugin-timestamps": true,
-        events: true
+        events: true,
+        config: true
     },
     schema: {
         players: {

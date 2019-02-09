@@ -74,7 +74,7 @@ module.exports = (schema) => {
         return this.status === statuses.FREE;
     }
 
-    schema.methods.findCurrentMatch = async function () {
+    schema.methods.getCurrentMatch = async function () {
         const Match = await this.model('Match');
         const matches = await Match.find({ status: { $in: [ Match.status.SETUP, Match.status.WAITING, Match.status.LIVE ] }, server: this });
 
@@ -103,10 +103,10 @@ module.exports = (schema) => {
         })
     }
 
-    schema.methods.createDiscordChannel = async function () {
-        // TODO: Fix issues.
+    schema.methods.createDiscordChannels = async function () {
+        log(`Creating discord channels for server ${this.name}`);
 
-        const server_config = getConfig(server[this.name]);
+        const config = this.getConfig();
 
         if (!this.discordChannel.children || this.discordChannel.children.size !== 4) {
             const guild = this.getDiscordGuild();
@@ -122,28 +122,48 @@ module.exports = (schema) => {
             let channel;
 
             channel = await guild.createChannel("general", "text", [{
-                id: this.getConfig(discord.roles.player),
+                id: config.discord.roles.player,
                 allowed: [ 'SEND_MESSAGES' ]
-            }], `Server ${server.name} channel setup`);
-            await channel.setParent(server.discordChannel);
+            }], `Server ${this.name} channel setup`);
+            await channel.setParent(this.discordChannel);
 
-            channel = await guild.createChannel(this.getConfig(teams.A.name), "voice", [{
-                id: this.getConfig(teams.A.role),
+            channel = await guild.createChannel(config.teams.A.name, "voice", [{
+                id: config.teams.A.role,
                 allowed: [ 'CONNECT' ]
             }, {
                 id: guild.id,
                 denied: [ 'CONNECT' ]
-            }], `Server ${server.name} channel setup`);                
-            await channel.setParent(server.discordChannel);
+            }], `Server ${this.name} channel setup`);                
+            await channel.setParent(this.discordChannel);
 
-            channel = await guild.createChannel(this.getConfig(teams.B.name), "voice", [{
-                id: this.getConfig(teams.B.role),
+            channel = await guild.createChannel(config.teams.B.name, "voice", [{
+                id: config.teams.B.role,
                 allowed: [ 'CONNECT' ]
             }, {
                 id: guild.id,
                 denied: [ 'CONNECT' ]
-            }], `Server ${server.name} channel setup`);                
-            await channel.setParent(server.discordChannel);
+            }], `Server ${this.name} channel setup`);                
+            await channel.setParent(this.discordChannel);
+        }
+    }
+
+    schema.methods.moveDiscordPlayers = async function () {
+        const Player = this.model('Player');
+        const match = await this.getCurrentMatch();
+
+        if (!match) return null;
+
+        const players = match.players;
+        const that = this;
+
+        for (let i in players) {
+            const player = await Player.findById(i);
+
+            if (players[i].team === "A") {
+                player.discordMember.setVoiceChannel(that.getDiscordTeamAChannel()); 
+            } else if (players[i].team === "B") {
+                player.discordMember.setVoiceChannel(that.getDiscordTeamBChannel()); 
+            }
         }
     }
 
@@ -154,7 +174,7 @@ module.exports = (schema) => {
         log(`Attached log events for server ${this.name}`);
 
         this.events.on("Log_onMapChange", async function (event) {
-            const match = await server.findCurrentMatch();
+            const match = await server.getCurrentMatch();
 
             if (match) await match.handleMapChange(event);
         });

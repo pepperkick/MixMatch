@@ -64,6 +64,7 @@ module.exports = async (app) => {
     Server.on("rcon_connected", onServerRconConnected);
     Server.on("rcon_disconnected", onServerRconDisconnected);
     Server.on("rcon_error", onServerRconError);
+    Match.on("new", onMatchUpdate);
     Match.on("update", onMatchUpdate);
     app.on("server_player_connected", onPlayerConnectedToServer);
 
@@ -84,11 +85,11 @@ module.exports = async (app) => {
         const servers = app.config.servers;
         for (let name in servers) {
             const server_config = servers[name];
-            const server_in_db = await Server.findOne({ name });
+            let server_in_db = await Server.findOne({ name });
 
             if (server_in_db);
             else {
-                await createNewServer(name, server_config);
+                server_in_db = await createNewServer(name, server_config);
             }
 
             log(`Connecting to RCON for server ${server_in_db.name}`);
@@ -118,10 +119,23 @@ module.exports = async (app) => {
                 log(error);
             }
         } else if (queue.status === Queue.status.FREE) {
+            try {
+                if (queue.players.length === 0) {
+                    await queue.discordRole.setName(`${queue.name}: Empty`);
+                } else {
+                    await queue.discordRole.setName(`${queue.name}: Queuing (${queue.players.length}/${format.size * 2})`);
+                }
+            } catch (error) {
+                log(`Failed to set role name for Queue ${queue.name}`, error);
+            }
+
             if (queue.players.length >= format.size * 2) {        
                 log(`Enough players have joined ${queue.name}, finding a free server.`);
                 
                 const server = await Server.findFreeServer();
+
+                if (!server) throw new Error("No free server found!");
+
                 const players = await divideTeams(queue, server, format); 
                 const map = format.maps[Math.floor(Math.random() * format.maps.length)];
                 const match = new Match({
@@ -140,16 +154,6 @@ module.exports = async (app) => {
                     log(`Failed to setup match for queue ${queue.name} due to error`, error);
                 }
             }
-
-            try {
-                if (queue.players.length === 0) {
-                    await queue.discordRole.setName(`${queue.name}: Empty`);
-                } else {
-                    await queue.discordRole.setName(`${queue.name}: Queuing (${queue.players.length}/${format.size * 2})`);
-                }
-            } catch (error) {
-                log(`Failed to set role name for Queue ${queue.name}`, error);
-            }
         } else if (queue.status === Queue.status.BLOCKED) {
             try {
                 await queue.discordRole.setName(`${queue.name}: Blocked`);
@@ -163,16 +167,14 @@ module.exports = async (app) => {
 
     async function onMatchUpdate(match) {
         const format = app.config.formats[match.format];
-        match = match.populate("server").execPopulate();
+        const server = await Server.findById(match.server);
 
         if (match.status === Match.status.SETUP) {
-            const server = match.server;
-
-            await server.setStatus(Server.status.RESERVED);
             await server.commands.changeLevel(match.map);
-            await server.execConfig(format.config);
-            await server.createDiscordChannel();
+            await server.createDiscordChannels();
+            await server.moveDiscordPlayers();
             await server.discordRole.setName(`${server.name}: Setting Up`);
+            await server.setStatus(Server.status.RESERVED);
             await server.save();
         } else if (match.status === Match.status.WAITING) {
             await server.discordRole.setName(`${server.name}: Waiting (0/${format.size * 2})`);
@@ -182,24 +184,29 @@ module.exports = async (app) => {
             await server.discordRole.setName(`${server.name}: Ended`);      
             await server.setStatus(Server.status.FREE);  
 
-            for await (let player of match.players) {
-                await player.discordMember.removeRole(app.config.teams.A.role);
-                await player.discordMember.removeRole(app.config.teams.B.role);
-                await player.discordMember.removeRole(server.role);
+            for (let i in match.players) {
+                await match.players[i].discordMember.removeRole(app.config.teams.A.role);
+                await match.players[i].discordMember.removeRole(app.config.teams.B.role);
+                await match.players[i].discordMember.removeRole(server.role);
             }
+        } else if (match.status === Match.status.ERROR) {     
+            await server.setStatus(Server.status.FREE);  
+        } else {   
+            await match.setStatus(Match.status.ERROR);  
         }
     }
 
     async function onServerUpdate(server) {        
-        // TODO: Update this
-
         if (server.status === Server.status.UNKNOWN) {
-            const match = await server.findCurrentMatch();
+            const match = await server.getCurrentMatch();
 
             if (server.isRconConnected);
             else return setTimeout(() => server.setStatus(Server.status.UNKNOWN), 10000);
 
-            if (match) server.setStatus(Server.status.RESERVED);
+            if (match) { 
+                server.setStatus(Server.status.RESERVED);
+                onMatchUpdate(match);
+            }
             else server.setStatus(Server.status.FREE);
         } else if (server.status === Server.status.FREE) {
             await server.discordRole.setName(`${server.name}: Free`);
@@ -281,6 +288,8 @@ module.exports = async (app) => {
 
         try {
             await server_new.save();
+
+            return server_new;
         } catch (error) {
             log(`Failed to save Server ${name} due to error`);
             log(error);
@@ -516,7 +525,6 @@ module.exports = async (app) => {
 
         for (let i = 0; i < format.size * 2; i++) {
             const player = await Player.findById(queue.players.pop());
-            await player.discordMember.addRole(server.role);
 
             if (i % 2 === 0) {
                 players[player.id] = {
@@ -532,6 +540,7 @@ module.exports = async (app) => {
                 await player.discordMember.addRole(app.config.teams.B.role);
             }
             
+            await player.discordMember.addRole(server.role);
             await queue.removePlayer(player);
             await server.commands.plugin.addPlayer(player.steam, i%2, player.getDiscordUser().username);
 

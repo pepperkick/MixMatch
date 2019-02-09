@@ -68,8 +68,6 @@ module.exports = app => {
                     if (queue.status === Queue.status.BLOCKED) return;
 
                     await queue.addPlayer(player);
-
-                    log(`Joined ${queue.name}`);
                 }
             }
         } else {
