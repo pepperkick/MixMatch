@@ -18,7 +18,7 @@ module.exports = (schema, options) => {
     });
     
     schema.methods.hasSourcemod = async function () {
-        const res = await this.rconConn.send("sm version");
+        const res = await this.sendCommand("sm version");
 
         if (res.includes("Unknown command")) return false;
 
@@ -29,7 +29,7 @@ module.exports = (schema, options) => {
         if (await this.hasSourcemod());
         else return false;
 
-        const res = await this.rconConn.send(`sm plugins info ${plugin}`);
+        const res = await this.sendCommand(`sm plugins info ${plugin}`);
 
         if (res.includes("is not loaded")) return false;
 
@@ -49,24 +49,24 @@ module.exports = (schema, options) => {
     };
 
     async function smKick(client, reason = "Kicked by Console") {
-        return this.rconConn.send(`sm_kick #${client} ${reason}`);
+        return this.sendCommand(`sm_kick #${client} ${reason}`);
     };
 
     async function conKick(client, reason = "Kicked by Console") {
-        return this.rconConn.send(`kick_ex #${client} ${reason}`);
+        return this.sendCommand(`kick_ex #${client} ${reason}`);
     };
 
     async function conChangeLevel(map) {
-        return this.rconConn.send(`changelevel ${map}`);
+        return this.sendCommand(`changelevel ${map}`);
     };
 
     async function conAddHttpLogListener(url) {
-        return this.rconConn.send(`logaddress_add_http "${url}"`);
+        return this.sendCommand(`logaddress_add_http "${url}"`);
     };
 
     async function pluginAddPlayer(steam, team, name) {
         if (await this.hasSourcemodPlugin("mixmatch")) {
-            return this.rconConn.send(`mx_add_player ${steam} ${team} "${name}"`);
+            return this.sendCommand(`mx_add_player ${steam} ${team} "${name}"`);
         }
     }
 }

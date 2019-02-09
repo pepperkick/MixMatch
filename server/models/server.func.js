@@ -66,7 +66,7 @@ module.exports = (schema) => {
                 line = line.split("//")[0];
             }
 
-            await this.rconConn.send(line);
+            await this.sendCommand(line);
         });
     }
 
@@ -154,8 +154,6 @@ module.exports = (schema) => {
         log(`Attached log events for server ${this.name}`);
 
         this.events.on("Log_onMapChange", async function (event) {
-            log(event);
-
             const match = await server.findCurrentMatch();
 
             if (match) await match.handleMapChange(event);
