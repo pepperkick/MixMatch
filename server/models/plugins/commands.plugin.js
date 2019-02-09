@@ -1,5 +1,5 @@
 module.exports = (schema, options) => {  
-    schema.methods.commands = function () {
+    schema.virtual("commands").get(function () {
         return {
             kick: kick.bind(this),
             changeLevel: changeLevel.bind(this),
@@ -15,7 +15,7 @@ module.exports = (schema, options) => {
                 addPlayer: pluginAddPlayer.bind(this)
             }
         }
-    };
+    });
     
     schema.methods.hasSourcemod = async function () {
         const res = await this.rconConn.send("sm version");

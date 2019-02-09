@@ -4,7 +4,8 @@ module.exports = (schema, app) => {
     const statuses = Object.freeze({
         FREE: "FREE",
         JOINED: "JOINED",
-        CONNECTED: "CONNECTED"
+        CONNECTED: "CONNECTED",
+        PLAYING: "PLAYING"
     });
 
     schema.add({
@@ -47,6 +48,16 @@ module.exports = (schema, app) => {
         await this.save();
     }
 
+    schema.methods.joinQueue = async function (queue) {
+        this.status = statuses.JOINED;
+        this.queue = queue.id;
+
+        await this.discordMember.addRole(queue.role);
+        await this.save();
+
+        this.model(this.constructor.modelName).emit('player_joined_queue', this);
+    }
+
     schema.methods.leaveQueue = async function () {
         try {
             await this.discordMember.removeRole(this.queue.role);
@@ -62,26 +73,13 @@ module.exports = (schema, app) => {
         this.model(this.constructor.modelName).emit('player_left_queue', this);
     }
 
-    schema.methods.joinQueue = async function (queue) {
-        this.status = statuses.JOINED;
-        this.queue = queue.id;
-
-        await this.discordMember.addRole(queue.role);
-        await this.save();
-
-        this.model(this.constructor.modelName).emit('player_joined_queue', this);
-    }
-
-    schema.virtual("match.team").get(async function () {
-        // TODO: Update this
-        
-        return null;
+    schema.virtual("match.team").get(async function () {        
+        // TODO: Fix
+        // return this.match.players[this.id].team;
     });
 
     schema.virtual("match.client").get(async function () {
-        // TODO: Update this
-        
-
-        return parseInt(result);
+        // TODO: Fix
+        // return this.match.players[this.id].client;
     });
 }

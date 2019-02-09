@@ -214,7 +214,8 @@ module.exports = async (app) => {
         try {
             // TODO: Update this
 
-            await server.commands().console.addHttpLogListener(`http://${app.config.host}:${app.config.port}/log_listener`);
+            await server.commands.console.addHttpLogListener(`http://${app.config.host}:${app.config.port}/log_listener`);
+            await server.attachLogEvents();
 
             log(`Log listener added to server ${server.name}`);
         } catch (error) {

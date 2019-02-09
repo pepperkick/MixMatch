@@ -14,6 +14,11 @@ module.exports = {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Queue',
             default: null
+        },
+        match: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Match',
+            default: null
         }
     },
     options: {

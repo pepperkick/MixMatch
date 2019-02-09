@@ -5,7 +5,7 @@ function Exception(code, message, fileName, lineNumber) {
     Object.setPrototypeOf(instance, Object.getPrototypeOf(this));
     
     if (Error.captureStackTrace) {
-      Error.captureStackTrace(instance, Exception);
+        Error.captureStackTrace(instance, Exception);
     }
 
     return instance;
@@ -13,13 +13,13 @@ function Exception(code, message, fileName, lineNumber) {
 
 Exception.prototype = Object.create(Error.prototype, {
     constructor: {
-      value: Error,
-      enumerable: false,
-      writable: true,
-      configurable: true
+        value: Error,
+        enumerable: false,
+        writable: true,
+        configurable: true
     }
 });
-  
+
 if (Object.setPrototypeOf){
     Object.setPrototypeOf(Exception, Error);
 } else {

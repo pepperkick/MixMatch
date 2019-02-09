@@ -147,57 +147,44 @@ module.exports = (schema) => {
         }
     }
 
-    schema.methods.attachEvents = function () {
-        this.events.on("Log_onMapChange", async data => {
-            const { map } = data.data;
-            const match = await this.findCurrentMatch();
+    schema.methods.attachLogEvents = function () {
+        const Match = this.model('Match');
+        const server = this;
 
-            if (match) {
-                if (match.status === Match.status.SETUP && match.map === map) {
-                    match.status = Match.status.WAITING;
+        log(`Attached log events for server ${this.name}`);
 
-                    await match.save();
-                } else if (match.status === Match.status.WAITING && match.map !== map) {
-                    match.status = Match.status.SETUP;
+        this.events.on("Log_onMapChange", async function (event) {
+            log(event);
 
-                    await match.save();
-                } else if (match.status === Match.status.LIVE && match.map !== map) {
-                    match.status = Match.status.ERROR;
+            const match = await server.findCurrentMatch();
 
-                    await match.save();
-
-                    throw new Error("Map changed mid live match");
-                }
-            }
+            if (match) await match.handleMapChange(event);
         });
 
-        this.events.on("Log_onPlayerConnected", async data => {
-            const { steam_id, client } = data.data;
+        this.events.on("Log_onPlayerConnected", async function (event) {
+            const { steamId, client } = event.data;
 
-            log(this.status);
-            
-            return;
+            log(`Player ${steamId} connected to server ${server.name}`);
 
-            if (this.status === statuses.UNKNOWN) {
-                return await this.sourcemod.kick(client, "Server is not ready to accept connections");
-            } else if (this.status === statuses.FREE) {
-                return await this.sourcemod.kick(client, "No match is currently going on in this server");
-            } else if (this.status === statuses.SETUP) {
-                return await this.sourcemod.kick(client, "Please join back later as server is setting up");
-            } else if (this.status === statuses.WAITING) {
+            if (server.status === statuses.UNKNOWN) {
+                return await server.commands.kick(client, "Server is not ready to accept connections");
+            } else if (server.status === statuses.FREE) {
+                return await server.commands.kick(client, "Server is not currently accepting connections");
+            } else if (server.status === statuses.RESERVED) {
             } else {
-                return await this.sourcemod.kick(client, "Unable to join currently");
+                return await server.commands.kick(client, "Unable to join currently");
             }
 
-            const player = await this.model('Player').findBySteam(steam_id);
+            const player = await server.model('Player').findBySteam(steam_id);
 
             if (player) {
-                if (!this.checkIfPlayerAssigned(player)) {
-                    return await this.sourcemod.kick(client, "You cannot join this match");
+                if (await Match.isPlayerAssigned(player.id.toString()));
+                else if (await Match.isPlayerPlaying(player.id.toString()));
+                else {
+                    return await server.commands.kick(client, "You cannot join this match");
                 }
-
             } else {
-                return await this.sourcemod.kick(client, "You need to register with MixMatch to join the matches");
+                return await server.commands.kick(client, "You need to register with MixMatch to join the matches");
             }
         });
     }
@@ -210,13 +197,10 @@ module.exports = (schema) => {
 
     schema.post('init', async doc => {
         try {
-            // TODO: Make status as virtual
+            if (cache[`${doc.id.toString()}`]) return;
 
-            if (cache[`${doc.ip}:${doc.port}`]) return;
-
-            cache[`${doc.ip}:${doc.port}`] = true;
+            cache[`${doc.id.toString()}`] = true;
             
-            await doc.attachEvents();
             await doc.setStatus(statuses.UNKNOWN);
         } catch (error) {
             log(error);

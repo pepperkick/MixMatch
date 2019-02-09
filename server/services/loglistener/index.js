@@ -73,7 +73,7 @@ async function checkEvents(line) {
                 }
             }
 
-            log(`Log Event fired: ${event.name}`);
+            log(`Log Event fired: (${server.name}) ${event.name}`);
             line.data = data;
     
             if (server) {
