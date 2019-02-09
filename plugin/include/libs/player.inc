@@ -1,10 +1,3 @@
-//============================================
-//    CountPlayersInAnyTeam
-//        Checks the number of players in server
-//        Only countes players in a team
-//         Sets counted players
-//============================================
-
 public int CountPlayersInAnyTeam() {
     int l_iPlayers = 0;
 

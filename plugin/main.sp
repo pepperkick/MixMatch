@@ -46,18 +46,10 @@ public OnPluginStart() {
     // Attach HUD
     g_hoHud = HudInit(127, 255, 127);
 
-    // RegConsoleCmd("mx_init", Command_Init);
-    // RegConsoleCmd("mx_reset", Command_Reset); 
     RegConsoleCmd("mx_list_players", Command_ListPlayers);  
     RegConsoleCmd("mx_add_player", Command_AddPlayer);   
     RegConsoleCmd("mx_get_player_client", Command_GetPlayerClient);  
-    RegConsoleCmd("mx_set_map", Command_SetMap);    
-    RegConsoleCmd("mx_set_format", Command_SetFormat); 
-    RegConsoleCmd("mx_set_size", Command_SetSize); 
-    RegConsoleCmd("mx_get_status", Command_GetStatus);  
-    RegConsoleCmd("mx_set_status", Command_SetStatus);   
     RegConsoleCmd("mx_send_player_chat", Command_SendPlayerChat);  
-    RegConsoleCmd("mx_version", Command_Version);
 
     HookEvent("player_changename", Event_NameChange, EventHookMode_Post);
 
@@ -75,29 +67,19 @@ public void OnClientAuthorized(int client) {
         return;
     }
 
-    if (GetStatus() == STATE_UNKNOWN) {
-        KickClient(client, "Server is not ready, please check discord for more info");
-    } else if (GetStatus() == STATE_FREE) {
-        KickClient(client, "You need to queue in discord to join this server");
-    } else if (GetStatus() == STATE_SETUP) {
-        KickClient(client, "Server is under going setup, please join back after it's done");
-    } else if (GetStatus() == STATE_WAITING || GetStatus() == STATE_LIVE) {
-        char steam[32];        
-        if (!GetClientAuthId(client, AuthId_SteamID64, steam, sizeof(steam))) {
-            KickClient(client, "Unknown Steam ID");
-            return;
-        }
-
-        if (PlayerSteam.FindString(steam) == -1 && GetConVarInt(g_hcRestrictPlayers) == 1) {
-            KickClient(client, "You cannot join the server as you are not in the current game");
-            return;
-        }
-
-        Log("Player Joined with id %s", steam);
-        Game_OnPlayerConnect(client);
-    } else if (GetStatus() == STATE_END) {
-        KickClient(client, "You need to queue in discord to join this server");
+    char steam[32];        
+    if (!GetClientAuthId(client, AuthId_SteamID64, steam, sizeof(steam))) {
+        KickClient(client, "Unknown Steam ID");
+        return;
     }
+
+    if (PlayerSteam.FindString(steam) == -1 && GetConVarInt(g_hcRestrictPlayers) == 1) {
+        KickClient(client, "You cannot join the server as you are not in the current game");
+        return;
+    }
+
+    Log("Player Joined with id %s", steam);
+    Game_OnPlayerConnect(client);
 }
 
 public void OnClientPostAdminCheck(int client) {
@@ -105,70 +87,14 @@ public void OnClientPostAdminCheck(int client) {
 }
 
 public void OnMapStart() {
-    #if defined GAME_TF2
-        Match_OnMapStart();
-    #endif
-
-    if (GetStatus() == STATE_SETUP) {
-        SetStatus(STATE_WAITING);
-
-        ExecutePluginConfigs();
-
-        #if defined GAME_CSGO
-        ServerCommand("mp_warmuptime 1800");
-        ServerCommand("mp_warmup_start");
-        ServerCommand("bot_kick all");
-        ServerCommand("bot_quota 0");
-        #endif
-
-        #if defined GAME_TF2
-        ServerCommand("mp_tournament 1");
-        ServerCommand("mp_tournament_restart");
-        #endif
-    } else if (GetStatus() == STATE_WAITING) {
-        Log("Map changed during waiting phase, Ignoring...");
-    } else {
-        // TODO: Report error if map changes while STATE_LIVE
-
-        SetStatus(STATE_FREE);
-    }
-
     Log("Map Started");
+    Game_OnMapStart();
 }
 
 public void OnMapEnd() {
     Log("Map Ended");
-
     Game_OnMapEnd();
 }
-
-// TODO: Remve this function
-// public Action Command_Init(int client, int args) {
-//     char ip[128], port[128], server_name[128];
-
-//     GetCmdArg(1, ip, sizeof(ip));
-//     GetCmdArg(2, port, sizeof(port));
-//     GetCmdArg(3, server_name, sizeof(server_name));
-
-//     Format(HostIP, sizeof(HostIP), "%s", ip);
-//     Format(HostPort, sizeof(HostPort), "%s", port);
-//     Format(ServerName, sizeof(ServerName), "%s", server_name);
-
-//     PrintToServer("response::ok");
-
-//     Log("Plugin initialized with following settings (IP: %s, Porst: %s, Name: %s)", HostIP, HostPort, ServerName);
-
-//     return Plugin_Continue;
-// }
-
-// TODO: Remve this function
-// public Action Command_Reset(int client, int args) {
-//     Reset(false);
-
-//     PrintToServer("response::ok");
-
-//     return Plugin_Continue;
-// }
 
 public Action Command_AddPlayer(int client, int args) {
     char steam[128], team[4], name[128];
@@ -233,92 +159,6 @@ public Action Command_GetPlayerClient(int client, int args) {
     PrintToServer("%d", -1);
 }
 
-public Action Command_SetMap(int client, int args) {
-    char map[256];
-    
-    GetCmdArg(1, map, sizeof(map));
-
-    PrintToServer("response::ok");
-
-    ServerCommand("changelevel %s", map);
-
-    Log("Sent command to change server map to %d", map);
-
-    return Plugin_Continue;
-}
-
-public Action Command_SetFormat(int client, int args) {
-    char format[256];
-    
-    GetCmdArg(1, format, sizeof(format));
-
-    Format(ServerFormat, sizeof(ServerFormat), "%s", format);
-
-    PrintToServer("response::ok::%s", format);
-
-    Log("Changed server format to %s", ServerFormat);
-
-    return Plugin_Continue;
-}
-
-public Action Command_SetSize(int client, int args) {
-    char size[2];
-    
-    GetCmdArg(1, size, sizeof(size));
-
-    ServerTeamSize = StringToInt(size, 10);
-
-    PrintToServer("response::ok::%s", size);
-
-    Log("Changed server team size to %d", ServerTeamSize);
-
-    return Plugin_Continue;
-}
-
-public Action Command_SetStatus(int client, int args) {
-    char status[16];
-
-    GetCmdArg(1, status, sizeof(status));
-
-    if (StrEqual(status, "FREE", false)) {
-        SetStatus(STATE_FREE);
-        PrintToServer("response::ok");
-    } else if (StrEqual(status, "SETUP", false)) {
-        SetStatus(STATE_SETUP);
-        PrintToServer("response::ok");
-    } else if (StrEqual(status, "WAITING", false)) {
-        SetStatus(STATE_WAITING);
-        PrintToServer("response::ok");
-    } else {
-        PrintToServer("error::unknwon_status");
-    }
-
-    return Plugin_Continue;
-}
-
-public Action Command_GetStatus(int client, int args) {
-    int status = GetStatus();
-
-    switch(status) {
-        case STATE_UNKNOWN: 
-            PrintToServer("UNKNOWN");
-        case STATE_FREE: 
-            PrintToServer("FREE");
-        case STATE_SETUP: 
-            PrintToServer("SETUP");
-        case STATE_WAITING: 
-            PrintToServer("WAITING");
-        case STATE_LIVE: 
-            PrintToServer("LIVE");
-        case STATE_END: 
-            PrintToServer("ENDED");
-        default: 
-            PrintToServer("ERROR");
-    }
-
-    return Plugin_Continue;
-}
-
 public Action Command_ListPlayers(int client, int args) {
     for (int i = 0; i < PlayerSteam.Length; i++) {
         char steam[32], name[32], team[4];
@@ -340,12 +180,6 @@ public Action Command_SendPlayerChat(int client, int args) {
     player = StringToInt(client, 10);
 
     PrintToChat(player, "[%s] %s", TAG, msg);
-}
-
-public Action Command_Version(int client, int args) {
-    PrintToServer(PLUGIN_VERSION);
-
-    return Plugin_Continue;
 }
 
 public void Event_NameChange(Event event, const char[] name, bool dontBroadcast) {
@@ -373,38 +207,6 @@ public Action:Timer_PostMatchCoolDown(Handle timer) {
     return Plugin_Stop;
 }
 
-public void SetStatus(int status) {
-    Log("Setting status to %d", status);
-
-    char SeverStatus[32];
-
-    switch(status) {
-        case STATE_FREE: 
-            Format(SeverStatus, sizeof(SeverStatus), "free");
-        case STATE_SETUP: 
-            Format(SeverStatus, sizeof(SeverStatus), "setup");
-        case STATE_WAITING: 
-            Format(SeverStatus, sizeof(SeverStatus), "waiting");
-        case STATE_LIVE: 
-            Format(SeverStatus, sizeof(SeverStatus), "live");
-        case STATE_END: 
-            Format(SeverStatus, sizeof(SeverStatus), "ended");
-        default: 
-            Format(SeverStatus, sizeof(SeverStatus), "unknown");
-    }
-
-    StringMap parameters = new StringMap();
-    parameters.SetString("status", SeverStatus);
-
-    SendRequest("status_change", parameters);
-
-    SetConVarInt(g_hcGameStatus, status, false, false);
-}
-
-public int GetStatus() {
-    return GetConVarInt(g_hcGameStatus);
-}
-
 public void Reset(bool notify) {
     PlayerSteam.Clear();
     PlayerName.Clear();
@@ -419,58 +221,6 @@ public void Reset(bool notify) {
     #if defined GAME_CSGO
         Game_Reset();
     #endif
-
-    SetStatus(STATE_FREE);
-}
-
-public void SendRequest(char[] type, StringMap parameters) {
-    char url[1024];
-
-    Format(url, sizeof(url), "http://%s:%s/plugin/%s", HostIP, HostPort, type);
-
-    Handle req = SteamWorks_CreateHTTPRequest(k_EHTTPMethodGET, url);
-    SteamWorks_SetHTTPRequestHeaderValue(req, "User-Agent", "SteamWorks for SourceMod")
-
-    StringMapSnapshot keys = parameters.Snapshot();
-
-    for (int i = 0; i < keys.Length; i++) {
-        char key[1024];
-        char value[1024];
-
-        keys.GetKey(i, key, sizeof(key));
-        parameters.GetString(key, value, sizeof(value));
-
-        SteamWorks_SetHTTPRequestGetOrPostParameter(req, key, value);
-    }
-    
-    SteamWorks_SetHTTPRequestGetOrPostParameter(req, "name", ServerName);
-
-    SteamWorks_SendHTTPRequest(req);
-
-    Log("Sending request %s", type);
-}
-
-public void OnRequestComplete(bool bSuccess, int iStatusCode, StringMap tHeaders, const char[] sBody, int iErrorType, int iErrorNum, any data) {
-    if (bSuccess) {
-        Log("Finished request with status code %d", iStatusCode);
-    } else {
-        Log("Failed request with error type %d, error num %d", iErrorType, iErrorNum);
-    }
-}
-
-public void ExecutePluginConfigs() {
-    char map[256];
-
-    GetCurrentMap(map, sizeof(map));
-    
-    new String:prefix[8];
-    SplitString(map, "_", prefix, 8)
-
-    ServerCommand("exec %/maps/%s", CONFIG_DIR, prefix);
-    ServerCommand("exec %/maps/%s", CONFIG_DIR, map);
-    ServerCommand("exec %s/maps/%s-%s", CONFIG_DIR, map, ServerFormat);
-    ServerCommand("exec %s/configs/%s", CONFIG_DIR, ServerFormat);
-    ServerCommand("exec %s/configs/%s-%s", CONFIG_DIR, ServerFormat, prefix);
 }
 
 public Log(const char[] myString, any ...) {

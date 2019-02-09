@@ -14,23 +14,15 @@
 #define TEAM_SPC 4
 #endif
 
-#define STATE_UNKNOWN   0
-#define STATE_FREE      1
-#define STATE_SETUP     2
-#define STATE_WAITING   3
-#define STATE_LIVE      4
-#define STATE_END       5
-
 // Core Includes
 #include <sourcemod>
 #include <morecolors>
 #include <sdktools>
-#include <SteamWorks>
 
 #include <libs/hud>
+#include <libs/player>
 
 #include <cvars>
-#include <player>
 
 #if defined GAME_TF2
 #include <libs/minhud>

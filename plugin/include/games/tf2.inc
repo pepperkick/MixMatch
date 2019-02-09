@@ -2,6 +2,10 @@ public void Game_OnPluginLoad() {
     Match_OnPluginStart();
 }
 
+public void Game_OnMapStart() {
+    Match_OnMapStart();
+}
+
 public void Game_OnMapEnd() {
     Match_OnMapEnd();
 }

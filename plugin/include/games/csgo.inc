@@ -8,6 +8,10 @@ public void Game_OnPluginLoad() {
     HookEvent("round_prestart", Event_RoundStart);
 }
 
+public void Game_OnMapStart() {
+
+}
+
 public void Game_OnMapEnd() {
 
 }
