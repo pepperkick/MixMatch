@@ -89,8 +89,8 @@ public void OnClientAuthorized(int client) {
         }
 
         if (PlayerSteam.FindString(steam) == -1 && GetConVarInt(g_hcRestrictPlayers) == 1) {
-           KickClient(client, "You cannot join the server as you are not in the current game");
-           return;
+            KickClient(client, "You cannot join the server as you are not in the current game");
+            return;
         }
 
         Log("Player Joined with id %s", steam);

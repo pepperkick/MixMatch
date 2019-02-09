@@ -122,8 +122,6 @@ module.exports = (schema) => {
 
         this.format = format;
 
-        await this.rconConn.send(`mx_set_format ${this.format}`);
-
         await this.save();
     }
 

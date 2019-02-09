@@ -57,18 +57,8 @@ module.exports = app => {
         }
 
         player = await player.populate("queue").execPopulate();
-        // const playerTeam = await player.server.team;
-        // const playerClient = await player.server.client;
 
         const voiceChannel = player.discordMember.voiceChannelID;
-        
-        // if (playerTeam === "A" && voiceChannel !== app.config.queues[player.queue.name].voiceChannelA) {
-        //     await player.queue.rconConn.send(`mx_unready_player ${playerClient}`);
-        //     await player.queue.rconConn.send(`mx_send_player_chat ${playerClient} "You have left the team voice channel, you have been marked as unready. Please join the proper voice channel and use !ready command."`);
-        // } else if (playerTeam === "B" && voiceChannel !== app.config.queues[player.queue.name].voiceChannelB) {
-        //     await player.queue.rconConn.send(`mx_unready_player ${playerClient}`);
-        //     await player.queue.rconConn.send(`mx_send_player_chat ${playerClient} "You have left the team voice channel, you have been marked as unready. Please join the proper voice channel and use !ready command."`);
-        // }
 
         if (voiceChannel) {
             for (const name in app.config.queues) {

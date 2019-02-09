@@ -215,7 +215,7 @@ module.exports = (schema) => {
             if (cache[`${doc.ip}:${doc.port}`]) return;
 
             cache[`${doc.ip}:${doc.port}`] = true;
-
+            
             await doc.attachEvents();
             await doc.setStatus(statuses.UNKNOWN);
         } catch (error) {

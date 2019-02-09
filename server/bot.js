@@ -169,7 +169,7 @@ module.exports = async (app) => {
             const server = match.server;
 
             await server.setStatus(Server.status.RESERVED);
-            await server.rconConn.send(`changelevel ${match.map}`)
+            await server.commands.changeLevel(match.map);
             await server.execConfig(format.config);
             await server.createDiscordChannel();
             await server.discordRole.setName(`${server.name}: Setting Up`);
@@ -196,6 +196,9 @@ module.exports = async (app) => {
         if (server.status === Server.status.UNKNOWN) {
             const match = await server.findCurrentMatch();
 
+            if (server.isRconConnected);
+            else return setTimeout(() => server.setStatus(Server.status.UNKNOWN), 10000);
+
             if (match) server.setStatus(Server.status.RESERVED);
             else server.setStatus(Server.status.FREE);
         } else if (server.status === Server.status.FREE) {
@@ -207,15 +210,15 @@ module.exports = async (app) => {
         server = await Server.findById(server.id);
 
         log(`${server.name} RCON Connected Event`);
-
+        
         try {
             // TODO: Update this
 
-            await server.rconConn.send(`logaddress_add_http "http://${app.config.host}:${app.config.port}/log_listener"`);
+            await server.commands().console.addHttpLogListener(`http://${app.config.host}:${app.config.port}/log_listener`);
 
-            log("RCON Init command sent");
+            log(`Log listener added to server ${server.name}`);
         } catch (error) {
-            log(`Failed to get plugin version for server ${server.name}`, error);
+            log(`Failed to add log listener to server ${server.name}`, error);
 
             setTimeout(() => onServerRconConnected(server), 10000);
         }
@@ -529,7 +532,7 @@ module.exports = async (app) => {
             }
             
             await queue.removePlayer(player);
-            await queue.rconConn.send(`mx_add_player ${player.steam} ${i%2} "${player.getDiscordUser().username}"`);
+            await server.commands.plugin.addPlayer(player.steam, i%2, player.getDiscordUser().username);
 
             return players;
         }
