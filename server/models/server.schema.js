@@ -10,7 +10,6 @@ module.exports = {
         "discord.guild": true,
         rcon: true,
         config: true,
-        eventemitter: true,
         commands: true
     },
     schema: {

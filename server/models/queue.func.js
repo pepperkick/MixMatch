@@ -134,4 +134,72 @@ module.exports = (schema) => {
 
         return message;
     }
+
+    schema.post('save', async function (queue) {
+        const Queue = queue.model("Queue");
+        const Server = queue.model("Server");
+        const Match = queue.model("Match");
+
+        const config = queue.getConfig();
+        const format = config.formats[queue.format];
+        
+        if (queue.status === Queue.status.UNKNOWN) {
+            try {
+                const server = await Server.findFreeServer();
+
+                if (server) {
+                    await queue.setStatus(Queue.status.FREE);
+                } else {               
+                    await queue.setStatus(Queue.status.BLOCKED);
+                }
+            } catch (error) {
+                log(error);
+            }
+        } else if (queue.status === Queue.status.FREE) {
+            try {
+                if (queue.players.length === 0) {
+                    await queue.discordRole.setName(`${queue.name}: Empty`);
+                } else {
+                    await queue.discordRole.setName(`${queue.name}: Queuing (${queue.players.length}/${format.size * 2})`);
+                }
+            } catch (error) {
+                log(`Failed to set role name for Queue ${queue.name}`, error);
+            }
+
+            if (queue.players.length >= format.size * 2) {        
+                log(`Enough players have joined ${queue.name}, finding a free server.`);
+                
+                const server = await Server.findFreeServer();
+
+                if (!server) throw new Error("No free server found!");
+
+                const players = await divideTeams(queue, server, format); 
+                const map = format.maps[Math.floor(Math.random() * format.maps.length)];
+                const match = new Match({
+                    status: Match.status.SETUP,
+                    server,
+                    players,
+                    map,
+                    format: queue.format
+                });
+
+                try {    
+                    await match.save();
+                    await server.execConfig(format.config);     
+                    await queue.setStatus(Queue.status.FREE);
+                } catch (error) {
+                    log(`Failed to setup match for queue ${queue.name} due to error`, error);
+                }
+            }
+        } else if (queue.status === Queue.status.BLOCKED) {
+            try {
+                await queue.discordRole.setName(`${queue.name}: Blocked`);
+                
+                setTimeout(() => queue.setStatus(Queue.status.UNKNOWN), 30000);
+            } catch (error) {
+                log(`Failed to set role name for Queue ${queue.name}`, error);
+            }
+        }
+
+    });
 }

@@ -7,7 +7,8 @@ module.exports = {
         events: true,
         "discord.channel": true,
         "discord.role": true,
-        "discord.guild": true
+        "discord.guild": true,
+        config: true
     },
     schema: {
         name: String,

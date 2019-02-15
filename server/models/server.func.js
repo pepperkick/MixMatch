@@ -76,7 +76,7 @@ module.exports = (schema) => {
 
     schema.methods.getCurrentMatch = async function () {
         const Match = await this.model('Match');
-        const matches = await Match.find({ status: { $in: [ Match.status.SETUP, Match.status.WAITING, Match.status.LIVE ] }, server: this });
+        const matches = await Match.find({ status: { $in: [ Match.status.SETUP, Match.status.WAITING, Match.status.KNIFE, Match.status.LIVE ] }, server: this });
 
         if (matches.length > 0) {
             return matches[0];
@@ -101,6 +101,31 @@ module.exports = (schema) => {
             port: this.port,
             type: 'tf2'
         })
+    }
+
+    schema.methods.getGameStatus = async function () {
+        return this.commands.status();
+    }
+
+    schema.methods.getGameStatusPlayers = async function () {
+        const status = await this.getGameStatus();
+        const regex = /# ( |)(.*?) (.*?) \"(.*?)\" (.*?) (.*?):(.*?) (.*?) (.*?) (.*?) (.*?) (.*?)\n/gmi;
+        const data = status.match(regex);
+        const players = [];
+
+        if (!data || data.length === 0) return;
+
+        for (let i = 0; i < data.length; i++) {
+            if (data[i].includes("# ")) players.push(data[i]);
+        }
+
+        return players;
+    }
+
+    schema.methods.getNumberOfPlayers = async function () {
+        const players = await this.getGameStatusPlayers();
+
+        return players.length;
     }
 
     schema.methods.createDiscordChannels = async function () {
@@ -154,58 +179,76 @@ module.exports = (schema) => {
         if (!match) return null;
 
         const players = match.players;
-        const that = this;
 
         for (let i in players) {
             const player = await Player.findById(i);
 
             if (players[i].team === "A") {
-                player.discordMember.setVoiceChannel(that.getDiscordTeamAChannel()); 
+                player.discordMember.setVoiceChannel(this.getDiscordTeamAChannel()); 
             } else if (players[i].team === "B") {
-                player.discordMember.setVoiceChannel(that.getDiscordTeamBChannel()); 
+                player.discordMember.setVoiceChannel(this.getDiscordTeamBChannel()); 
             }
         }
     }
 
-    schema.methods.attachLogEvents = function () {
-        const Match = this.model('Match');
-        const server = this;
+    schema.methods.Log_onMapChange = async function (event) {
+        const match = await this.getCurrentMatch();
 
-        log(`Attached log events for server ${this.name}`);
+        if (match) await match.handleMapChange(event);
+    };
 
-        this.events.on("Log_onMapChange", async function (event) {
-            const match = await server.getCurrentMatch();
+    schema.methods.Log_onRoundStart = async function (event) {
+        const match = await this.getCurrentMatch();
 
-            if (match) await match.handleMapChange(event);
-        });
+        if (match) await match.handleOnRoundStart(event);
+    };
 
-        this.events.on("Log_onPlayerConnected", async function (event) {
-            const { steamId, client } = event.data;
+    schema.methods.Log_onRoundEnd = async function (event) {
+        const match = await this.getCurrentMatch();
 
-            log(`Player ${steamId} connected to server ${server.name}`);
+        if (match) await match.handleOnRoundEnd(event);
+    };
 
-            if (server.status === statuses.UNKNOWN) {
-                return await server.commands.kick(client, "Server is not ready to accept connections");
-            } else if (server.status === statuses.FREE) {
-                return await server.commands.kick(client, "Server is not currently accepting connections");
-            } else if (server.status === statuses.RESERVED) {
-            } else {
-                return await server.commands.kick(client, "Unable to join currently");
+    schema.methods.Log_onKill = async function (event) {
+        const match = await this.getCurrentMatch();
+
+        if (match) await match.handleOnKill(event);
+    };
+
+    schema.methods.Log_onPlayerConnected = async function (event) {
+        const Player = this.model('Player');
+        const { steamId, client } = event.data;
+
+        log(`Player ${steamId} connected to server ${this.name} (${this.status})`);
+
+        if (this.status === statuses.UNKNOWN) {
+            return await this.commands.kick(client, "Server is not ready to accept connections");
+        } else if (this.status === statuses.FREE) {
+            return await this.commands.kick(client, "Server is not currently accepting connections");
+        } else if (this.status === statuses.RESERVED) {
+        } else {
+            return await this.commands.kick(client, "Unable to join currently");
+        }
+
+        if (steamId === "BOT") return;
+
+        const player = await Player.findBySteam(steamId);
+        const match = await this.getCurrentMatch();
+
+        if (match);
+        else return await this.commands.kick(client, "Something is not right, please try again later");
+
+        if (player) {
+            if (await match.isPlayerPlaying(steamId));
+            else {
+                return await this.commands.kick(client, "You cannot join this match");
             }
 
-            const player = await server.model('Player').findBySteam(steam_id);
-
-            if (player) {
-                if (await Match.isPlayerAssigned(player.id.toString()));
-                else if (await Match.isPlayerPlaying(player.id.toString()));
-                else {
-                    return await server.commands.kick(client, "You cannot join this match");
-                }
-            } else {
-                return await server.commands.kick(client, "You need to register with MixMatch to join the matches");
-            }
-        });
-    }
+            await match.handleOnPlayerConnect(event);
+        } else {
+            return await this.commands.kick(client, "You need to register with MixMatch to join the matches");
+        }
+    };
 
     schema.methods.checkIfPlayerAssigned = function (player) {
         if (player.server.id.toString() !== this.id.toString()) {
@@ -222,6 +265,25 @@ module.exports = (schema) => {
             await doc.setStatus(statuses.UNKNOWN);
         } catch (error) {
             log(error);
+        }
+    });
+
+    schema.post('save', async function (server) {
+        const Server = server.model("Server");
+
+        if (server.status === Server.status.UNKNOWN) {
+            const match = await server.getCurrentMatch();
+
+            if (server.isRconConnected);
+            else return setTimeout(() => server.setStatus(Server.status.UNKNOWN), 10000);
+
+            if (match) { 
+                await match.setStatus(match.status);
+                await server.setStatus(Server.status.RESERVED);
+            }
+            else server.setStatus(Server.status.FREE);
+        } else if (server.status === Server.status.FREE) {
+            await server.discordRole.setName(`${server.name}: Free`);
         }
     });
 }

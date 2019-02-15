@@ -77,7 +77,8 @@ async function checkEvents(line) {
             line.data = data;
     
             if (server) {
-                server.events.emit(`Log_${event.name}`, line);
+                if (server[`Log_${event.name}`])
+                    server[`Log_${event.name}`](line);
             }
 
             em.emit(event.name, line);

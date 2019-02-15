@@ -19,8 +19,7 @@
     },
     {
         "name": "onRoundEnd",
-        "line": "World triggered \"Game_Over\" reason \"(.*?)\"",
-        "arguments": [ "reason" ]
+        "line": "World triggered \"Round_End\""
     },
     {
         "name": "onRCONCommand",
@@ -50,17 +49,17 @@
     {
         "name": "onKill",
         "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] killed \"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] with \"(.*?)\"",
-        "arguments": [ "name", "client", "steamId", "team", "killerX", "killerY", "killerZ", "victim_name", "victim_client", "victim_steamId", "victim_team", "weapnn" ]
+        "arguments": [ "name", "client", "steamId", "team", "killerX", "killerY", "killerZ", "victim_name", "victim_client", "victim_steamId", "victim_team", "weapon" ]
     },
     {
         "name": "onKill",
         "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] killed \"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] with \"(.*?)\" \\(headshot\\)",
-        "arguments": [ "name", "client", "steamId", "team", "killerX", "killerY", "killerZ", "victim_name", "victim_client", "victim_steamId", "victim_team", "weapnn" ]
+        "arguments": [ "name", "client", "steamId", "team", "killerX", "killerY", "killerZ", "victim_name", "victim_client", "victim_steamId", "victim_team", "weapon" ]
     },
     {
         "name": "onKillWithHeadshot",
         "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] killed \"(.*?)<(.*?)><(.*?)><(.*?)>\" \\[(.*?) (.*?) (.*?)\\] with \"(.*?)\" \\(headshot\\)",
-        "arguments": [ "name", "client", "steamId", "team", "killerX", "killerY", "killerZ", "victim_name", "victim_client", "victim_steamId", "victim_team", "weapnn" ]
+        "arguments": [ "name", "client", "steamId", "team", "killerX", "killerY", "killerZ", "victim_name", "victim_client", "victim_steamId", "victim_team", "weapon" ]
     },
     {
         "name": "onBombPlanted",
@@ -71,5 +70,20 @@
         "name": "onBombDefused",
         "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" triggered \"Defused_The_Bomb\"",
         "arguments": [ "name", "client", "steamId", "team" ]
+    },
+    {
+        "name": "onSayAll",
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" say \"(.*?)\"",
+        "arguments": [ "name", "client", "steamId", "team", "message" ]
+    },
+    {
+        "name": "onSayTeam",
+        "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" say_team \"(.*?)\"",
+        "arguments": [ "name", "client", "steamId", "team", "message" ]
+    },
+    {
+        "name": "onMatchStart",
+        "line": "World triggered \"Match_Start\" on \"(.*?)\"",
+        "arguments": [ "map" ]
     }
 ]

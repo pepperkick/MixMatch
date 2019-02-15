@@ -59,14 +59,12 @@ module.exports = async (app) => {
     Player.on("new", onNewPlayer);
     Player.on("player_left_queue", onPlayerLeftQueue);
     Queue.on("init", onQueueInit);
-    Queue.on("update", onQueueUpdate);
-    Server.on("update", onServerUpdate);
     Server.on("rcon_connected", onServerRconConnected);
     Server.on("rcon_disconnected", onServerRconDisconnected);
     Server.on("rcon_error", onServerRconError);
-    Match.on("new", onMatchUpdate);
-    Match.on("update", onMatchUpdate);
     app.on("server_player_connected", onPlayerConnectedToServer);
+
+    setInterval(handleServerStatus, 30000);
 
     async function checkQueues() {
         const queues = app.config.queues;
@@ -98,119 +96,36 @@ module.exports = async (app) => {
         }
     }
 
+    async function handleServerStatus () {
+        const servers = await Server.find({ status: { $in: [ Server.status.FREE, Server.status.RESERVED ] } });
+
+        for (let server of servers) {
+            const players = await server.getGameStatusPlayers();
+
+            if (!players) continue;
+    
+            for (let i = 0; i < players.length; i++) {
+                const info = await Player.breakdownPlayerStatusLine(players[i]);
+                const steamId = info[5];
+                const client = info[2];
+                const player = await Player.findBySteam(steamId);
+    
+                if (player) {
+                    const match = await server.getCurrentMatch();
+                    
+                    if (match) {
+                        if (match.isPlayerPlaying(steamId));
+                        else return server.commands.kick(client, "You are not assigned to this match");
+                    } else return server.commands.kick(client, "Something went wrong, please try again later");
+                }
+                else return server.commands.kick(client, "Unable to verify your registration");
+            }
+        }
+    }
+
     function onQueueInit(queue) {  
         if (!prefs[queue.id]) prefs[queue.id] = {}; 
         registerCommands(queue);
-    }
-
-    async function onQueueUpdate(queue) {
-        const format = app.config.formats[queue.format];
-        
-        if (queue.status === Queue.status.UNKNOWN) {
-            try {
-                const server = await Server.findFreeServer();
-
-                if (server) {
-                    await queue.setStatus(Queue.status.FREE);
-                } else {               
-                    await queue.setStatus(Queue.status.BLOCKED);
-                }
-            } catch (error) {
-                log(error);
-            }
-        } else if (queue.status === Queue.status.FREE) {
-            try {
-                if (queue.players.length === 0) {
-                    await queue.discordRole.setName(`${queue.name}: Empty`);
-                } else {
-                    await queue.discordRole.setName(`${queue.name}: Queuing (${queue.players.length}/${format.size * 2})`);
-                }
-            } catch (error) {
-                log(`Failed to set role name for Queue ${queue.name}`, error);
-            }
-
-            if (queue.players.length >= format.size * 2) {        
-                log(`Enough players have joined ${queue.name}, finding a free server.`);
-                
-                const server = await Server.findFreeServer();
-
-                if (!server) throw new Error("No free server found!");
-
-                const players = await divideTeams(queue, server, format); 
-                const map = format.maps[Math.floor(Math.random() * format.maps.length)];
-                const match = new Match({
-                    status: Match.status.SETUP,
-                    server,
-                    players,
-                    map,
-                    format: queue.format
-                });
-
-                try {    
-                    await match.save();
-                    await server.execConfig(format.config);     
-                    await queue.setStatus(Queue.status.FREE);
-                } catch (error) {
-                    log(`Failed to setup match for queue ${queue.name} due to error`, error);
-                }
-            }
-        } else if (queue.status === Queue.status.BLOCKED) {
-            try {
-                await queue.discordRole.setName(`${queue.name}: Blocked`);
-                
-                setTimeout(() => queue.setStatus(Queue.status.UNKNOWN), 30000);
-            } catch (error) {
-                log(`Failed to set role name for Queue ${queue.name}`, error);
-            }
-        }
-    }
-
-    async function onMatchUpdate(match) {
-        const format = app.config.formats[match.format];
-        const server = await Server.findById(match.server);
-
-        if (match.status === Match.status.SETUP) {
-            await server.commands.changeLevel(match.map);
-            await server.createDiscordChannels();
-            await server.moveDiscordPlayers();
-            await server.discordRole.setName(`${server.name}: Setting Up`);
-            await server.setStatus(Server.status.RESERVED);
-            await server.save();
-        } else if (match.status === Match.status.WAITING) {
-            await server.discordRole.setName(`${server.name}: Waiting (0/${format.size * 2})`);
-        } else if (match.status === Match.status.LIVE) {
-            await server.discordRole.setName(`${server.name}: Live`);
-        } else if (match.status === Match.status.ENDED) {
-            await server.discordRole.setName(`${server.name}: Ended`);      
-            await server.setStatus(Server.status.FREE);  
-
-            for (let i in match.players) {
-                await match.players[i].discordMember.removeRole(app.config.teams.A.role);
-                await match.players[i].discordMember.removeRole(app.config.teams.B.role);
-                await match.players[i].discordMember.removeRole(server.role);
-            }
-        } else if (match.status === Match.status.ERROR) {     
-            await server.setStatus(Server.status.FREE);  
-        } else {   
-            await match.setStatus(Match.status.ERROR);  
-        }
-    }
-
-    async function onServerUpdate(server) {        
-        if (server.status === Server.status.UNKNOWN) {
-            const match = await server.getCurrentMatch();
-
-            if (server.isRconConnected);
-            else return setTimeout(() => server.setStatus(Server.status.UNKNOWN), 10000);
-
-            if (match) { 
-                server.setStatus(Server.status.RESERVED);
-                onMatchUpdate(match);
-            }
-            else server.setStatus(Server.status.FREE);
-        } else if (server.status === Server.status.FREE) {
-            await server.discordRole.setName(`${server.name}: Free`);
-        }
     }
 
     async function onServerRconConnected(server) {         
@@ -219,10 +134,7 @@ module.exports = async (app) => {
         log(`${server.name} RCON Connected Event`);
         
         try {
-            // TODO: Update this
-
             await server.commands.console.addHttpLogListener(`http://${app.config.host}:${app.config.port}/log_listener`);
-            await server.attachLogEvents();
 
             log(`Log listener added to server ${server.name}`);
         } catch (error) {
@@ -543,9 +455,9 @@ module.exports = async (app) => {
             await player.discordMember.addRole(server.role);
             await queue.removePlayer(player);
             await server.commands.plugin.addPlayer(player.steam, i%2, player.getDiscordUser().username);
-
-            return players;
         }
+        
+        return players;
     }
 
     async function registerCommand(options, handler) {

@@ -1,3 +1,4 @@
+const SteamID = require("steamid");
 const log = require('debug')('app:models:player');
 
 module.exports = (schema, app) => {    
@@ -27,7 +28,7 @@ module.exports = (schema, app) => {
     }
 
     schema.statics.findBySteam = async function (id) {
-        return await this.findOne({ steam: id });
+        return await this.findOne({ steam: new SteamID(id).getSteamID64() });
     }
 
     schema.statics.checkOrGet = async function (player) {
@@ -40,6 +41,13 @@ module.exports = (schema, app) => {
         }
 
         return player;
+    }
+
+    schema.statics.breakdownPlayerStatusLine = async function (line) {
+        const regex = "# ( |)(.*?) (.*?) \"(.*?)\" (.*?) (.*?):(.*?) (.*?) (.*?) (.*?) (.*?) (.*?)\n"
+        const data = line.match(regex);
+
+        return data;
     }
 
     schema.methods.setStatus = async function (status) {
