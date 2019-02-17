@@ -12,7 +12,8 @@ module.exports = (schema) => {
         VOTING: 'VOTING',
         LIVE: 'LIVE',
         ENDED: 'ENDED',
-        ERROR: 'ERROR'
+        ERROR: 'ERROR',
+        CANCELED: "CANCELED"
     });
     
     schema.add({
@@ -115,7 +116,9 @@ module.exports = (schema) => {
         const config = this.getConfig();
         const format = config.formats[this.format];
 
-        if (this.status === statuses.KNIFE) {
+        if (this.status === statuses.WAITING) {
+            await this.setStatus(statuses.CANCELED);
+        } else if (this.status === statuses.KNIFE) {
             await server.execConfig(format.config);
             await sleep(5000);
             await server.rconConn.send("mp_warmuptime 30");
@@ -172,6 +175,8 @@ module.exports = (schema) => {
                 await match.players[i].discordMember.removeRole(server.role);
             }
         } else if (match.status === Match.status.ERROR) {     
+            await server.setStatus(Server.status.FREE);  
+        }  else if (match.status === Match.status.CANCELED) {     
             await server.setStatus(Server.status.FREE);  
         } else {   
             await match.setStatus(Match.status.ERROR);  

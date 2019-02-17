@@ -109,6 +109,10 @@ module.exports = async (app) => {
                 const steamId = info[5];
                 const client = info[2];
                 const player = await Player.findBySteam(steamId);
+
+                if (server.status === Server.status.FREE) {
+                    return server.commands.kick(client, "Server is not accepting connections anymore");
+                }
     
                 if (player) {
                     const match = await server.getCurrentMatch();
