@@ -2,6 +2,7 @@ const express = require('express');
 const servgen = require('@abskmj/servgen');
 const debug = require('debug');
 const bodyParser = require('body-parser');
+const path = require('path');
 
 const bot  = require('./bot');
 
@@ -13,8 +14,20 @@ const log = debug("app:main");
 module.exports.init = async() => {
     // initialize services
     let app = new express();
-    
-    await servgen.init(app, __dirname + '/services');
+
+    await servgen.init(app, {
+        local: __dirname + "/services",
+        services: [
+            { 
+                module: "@pepperkick/servgen-config",
+                parameters: [ path.resolve(`${__dirname}/../`) ]
+            },
+            { 
+                module: "@pepperkick/servgen-connection",
+                parameters: [ path.resolve(`${__dirname}/models`) ]
+            }
+        ]
+    });
 
     const Queue = app.connection.model("Queue");
     

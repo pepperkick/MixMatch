@@ -21,7 +21,9 @@
   "dependencies": {
     "@abskmj/mongen": "github:abskmj/mongen#ec2eee18bc0b9f8a90731c0df19a6686587621d7",
     "@abskmj/mongoose-plugin-timestamps": "github:abskmj/mongoose-plugin-timestamps#3cfc5c46f4e2dfe732a67a499af9cff596f1e918",
-    "@abskmj/servgen": "github:abskmj/servgen#8646396359a0790c059035d5cee937cebb513e41",
+    "@abskmj/servgen": "github:abskmj/servgen#1a711ec7a6d323c5827a714782a8b121c4af48ba",
+    "@pepperkick/servgen-config": "github:pepperkick/servgen-config#26a35983e554b678f9abda16c352abb2ca6e064a",
+    "@pepperkick/servgen-connection": "github:pepperkick/servgen-connection#3edf1a2d28afd1c4b77ead812755e5075a707d15",
     "async-request": "^1.2.0",
     "async-sleep": "^0.1.0",
     "datagram-stream": "^1.1.1",
