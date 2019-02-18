@@ -109,6 +109,9 @@ module.exports = (schema) => {
 
     schema.methods.getGameStatusPlayers = async function () {
         const status = await this.getGameStatus();
+
+        if (!status) return -1;
+
         const regex = /# ( |)(.*?) (.*?) \"(.*?)\" (.*?) (.*?):(.*?) (.*?) (.*?) (.*?) (.*?) (.*?)\n/gmi;
         const data = status.match(regex);
         const players = [];
@@ -124,6 +127,8 @@ module.exports = (schema) => {
 
     schema.methods.getNumberOfPlayers = async function () {
         const players = await this.getGameStatusPlayers();
+
+        if (!players) return -1;
 
         return players.length;
     }
@@ -209,11 +214,29 @@ module.exports = (schema) => {
         if (match) await match.handleOnRoundEnd(event);
     };
 
+    schema.methods.Log_onMatchStart = async function (event) {
+        const match = await this.getCurrentMatch();
+
+        if (match) await match.handleOnMatchStart(event);
+    };
+
     schema.methods.Log_onKill = async function (event) {
         const match = await this.getCurrentMatch();
 
         if (match) await match.handleOnKill(event);
     };
+
+    schema.methods.Log_onSayAll = async function (event) {
+        const match = await this.getCurrentMatch();
+
+        if (match) await match.handleOnSay(event);
+    }
+
+    schema.methods.Log_onSayTeam = async function (event) {
+        const match = await this.getCurrentMatch();
+
+        if (match) await match.handleOnSay(event);
+    }
 
     schema.methods.Log_onPlayerConnected = async function (event) {
         const Player = this.model('Player');

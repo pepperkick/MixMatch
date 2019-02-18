@@ -22,7 +22,7 @@ module.exports = (schema, options) => {
     schema.methods.hasSourcemod = async function () {
         const res = await this.sendCommand("sm version");
 
-        if (res.includes("Unknown command")) return false;
+        if (!res || res.includes("Unknown command")) return false;
 
         return true;
     }
@@ -33,7 +33,7 @@ module.exports = (schema, options) => {
 
         const res = await this.sendCommand(`sm plugins info ${plugin}`);
 
-        if (res.includes("is not loaded")) return false;
+        if (!res || res.includes("is not loaded")) return false;
 
         return true;
     }

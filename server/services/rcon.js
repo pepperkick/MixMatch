@@ -16,7 +16,11 @@ module.exports = (app) => {
             cache[`${host}:${port}`] = rcon;
     
             log("Connected to", host, port);
-            
+                
+            rcon.onDidDisconnect(function () {
+                cache[`${host}:${port}`] = null;                
+            });
+
             return rcon;
         } catch (error) {
             throw (error);

@@ -15,12 +15,23 @@ module.exports = (schema) => {
         ERROR: 'ERROR',
         CANCELED: "CANCELED"
     });
+
+    const Team = Object.freeze({
+        T: "TERRORIST",
+        CT: "CT"
+    })
     
     schema.add({
         status: {
             type: String,
             enum: Object.values(statuses),
             default: statuses.UNKNOWN
+        },
+        matchStartTime: {
+            type: Date
+        },
+        prefs: {
+            type: Object
         }
     });
 
@@ -72,6 +83,8 @@ module.exports = (schema) => {
 
             await server.execConfig(format.config);
 
+            this.matchStartTime = new Date();
+
             await this.setStatus(statuses.WAITING);
         } else if (this.status === statuses.WAITING && this.map !== map) {
             await this.setStatus(statuses.SETUP);
@@ -92,7 +105,7 @@ module.exports = (schema) => {
         if (this.status === statuses.SETUP) {
             return await server.commands.kick(client, "Match is not ready yet, join back later");
         } else if (this.status === statuses.WAITING) {    
-            const num = await server.getNumberOfPlayers();
+            const num = await server.getNumberOfPlayers() || 0;
 
             log(`Number of players: ${num}`);
 
@@ -102,6 +115,13 @@ module.exports = (schema) => {
                 log(`Enough players have joined ${server.name}, turning on knife round.`);
 
                 await server.execConfig("csgo_kniferound");
+                await server.sendCommand("mp_warmuptime 15");
+                await server.sendCommand("mp_warmup_start");
+
+                this.prefs = {};
+                this.prefs.ts = 0;
+                this.prefs.cts = 0;
+
                 await this.setStatus(statuses.KNIFE);
             }
         } else if ([statuses.KNIFE, statuses.LIVE].includes(this.status)) {
@@ -116,15 +136,13 @@ module.exports = (schema) => {
         const config = this.getConfig();
         const format = config.formats[this.format];
 
-        if (this.status === statuses.WAITING) {
-            await this.setStatus(statuses.CANCELED);
-        } else if (this.status === statuses.KNIFE) {
+        if (this.status === statuses.KNIFE) {
+            await this.setStatus(statuses.VOTING);  
             await server.execConfig(format.config);
             await sleep(5000);
-            await server.rconConn.send("mp_warmuptime 30");
-            await server.rconConn.send("mp_restartgame 1");
-            await server.rconConn.send("mp_warmup_start");
-            await this.setStatus(Match.status.VOTING);  
+            await server.sendCommand("mp_warmuptime 30");
+            await server.sendCommand("mp_restartgame 1");
+            await server.sendCommand("mp_warmup_start");
         }
     }
 
@@ -132,15 +150,68 @@ module.exports = (schema) => {
         log(event);
 
         if (this.status === statuses.KNIFE) {
-            
+
         }
     }
 
-    schema.methods.handleOnKill = async function (event) {
+    schema.methods.handleOnMatchStart = async function (event) {
+        const Server = await this.model('Server');
+        const server = await Server.findById(this.server);
+        const config = this.getConfig();
+        const format = config.formats[this.format];
+        const num = await server.getNumberOfPlayers();
+
         log(event);
-        
+
+        if (this.status === statuses.WAITING) {
+            if (num > 1 && num < format.size * 2) {
+                await this.setStatus(statuses.CANCELED);                
+            } else if (num === format.size * 2) {
+                await this.setStatus(statuses.KNIFE);        
+            }
+        } else if (this.status === statuses.VOTING) {
+            this.setStatus(statuses.LIVE);
+        }
+    }
+
+    schema.methods.handleOnKill = async function (event) {        
         if (this.status === statuses.KNIFE) {
-            
+            const kt = event.data.team;
+            const vt = event.data.victim_team;
+
+            if (kt === vt) {
+                // TODO: find a way to handle this
+            } else if (kt === Team.T) {
+                this.prefs.knife_ts += 1;
+            } else if (kt === Team.CT) {
+                this.prefs.knife_cts += 1;
+            }
+        }
+    }
+
+    schema.methods.handleOnSay = async function (event) {
+        log(event);
+
+        if (this.status === statuses.VOTING) {
+            const msg = event.data.message;
+            const team = event.data.team;
+            const steamId = event.data.steamId;
+            const config = this.getConfig();
+            const format = config.formats[this.format];
+
+            if (team === this.prefs.knife_winner && !this.prefs.vote_submitted[steamId]) {
+                if (msg === "!switch") {
+                    this.prefs.vote_switch += 1;
+                    this.prefs.vote_submitted[steamId] = true;
+                }
+            }
+
+            if (this.prefs.vote_switch > format.size / 2) {
+                const Server = await this.model('Server');
+                const server = await Server.findById(this.server);
+
+                await server.sendCommand("mp_swapteams 1"); 
+            }
         }
     }
 
@@ -161,8 +232,25 @@ module.exports = (schema) => {
             await server.save();
         } else if (match.status === Match.status.WAITING) {
             await server.discordRole.setName(`${server.name}: Waiting (0/${format.size * 2})`);
+            const interval = setInterval(function () {
+                checkMatchStatus(match, interval);
+            }, 30000)
         } else if (match.status === Match.status.KNIFE) {
             await server.discordRole.setName(`${server.name}: Knife Round`);
+        }  else if (match.status === Match.status.VOTING) {
+            if (this.prefs.knife_ts > this.prefs.knife_cts) {
+                this.prefs.knife_winner = Team.T;
+            } else if (this.prefs.knife_ts < this.prefs.knife_cts) {
+                this.prefs.knife_winner = Team.CT;
+            } else {
+                const c = Math.floor(Math.random() * 2)
+                this.prefs.knife_winner = c === 0 ? Team.T : Team.CT; 
+            }
+
+            this.prefs.vote_switch = 0;
+            this.prefs.vote_submitted = [];
+
+            await server.discordRole.setName(`${server.name}: Voting`);
         } else if (match.status === Match.status.LIVE) {
             await server.discordRole.setName(`${server.name}: Live`);
         } else if (match.status === Match.status.ENDED) {
@@ -182,4 +270,28 @@ module.exports = (schema) => {
             await match.setStatus(Match.status.ERROR);  
         }
     });
+
+    async function checkMatchStatus(match, interval) {
+        const Server = match.model("Server");
+
+        const server = await Server.findById(match.server);
+        const config = match.getConfig();
+        const format = config.formats[match.format];
+        const num = await server.getNumberOfPlayers();
+        const cooldown = 5 * 60 * 1000;
+
+        log(`Checking match cooldown ${(new Date) - match.matchStartTime} / ${cooldown}`);
+
+        await server.discordRole.setName(`${server.name}: Waiting (${num}/${format.size * 2})`);
+
+        if (((new Date) - match.matchStartTime) > cooldown) {
+            if (match.status === statues.WAITING && num !== format.size * 2) {
+                log(`Match ${match.id} has gone past cooldown and only (${num} / ${format.size * 2}) players joined. So the match will be cancelled.`);
+
+                await match.setStatus(statuses.CANCELED);
+            }
+
+            clearInterval(interval);
+        }
+    }
 };

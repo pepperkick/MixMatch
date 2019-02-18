@@ -10,7 +10,7 @@ module.exports = (schema, options) => {
     });
 
     schema.virtual("isRconConnected").get(function () {
-        return this.getRconConnection() !== undefined;
+        return this.getRconConnection();
     });
 
     schema.methods.createRconConnection = async function () {
@@ -60,6 +60,10 @@ module.exports = (schema, options) => {
             if (!stack[this.id.toString()]) stack[this.id.toString()] = [];
 
             stack[this.id.toString()].push(cmd);
+
+            log(`Queued command ${cmd} for next connection`);
+
+            return null;
         }
     }
 

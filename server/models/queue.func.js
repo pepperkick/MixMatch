@@ -61,10 +61,10 @@ module.exports = (schema) => {
 
         this.players.push(player.id);
 
+        log(`${this.name}: Added Player ${player.id} (${player.discord})`);
+
         await player.joinQueue(this);
         await this.save();
-
-        log(`${this.name}: Added Player ${player.id} (${player.discord})`);
 
         return true;
     }
@@ -135,6 +135,36 @@ module.exports = (schema) => {
         return message;
     }
 
+    schema.methods.divideTeams = async function (server, format) {      
+        const Player = await this.model('Player');
+        const config = this.getConfig();
+        const players = {};
+
+        for (let i = 0; i < format.size * 2; i++) {
+            const player = await Player.findById(this.players.pop());
+
+            if (i % 2 === 0) {
+                players[player.id] = {
+                    team: "A"
+                }
+
+                await player.discordMember.addRole(config.teams.A.role);
+            } else {
+                players[player.id] = {
+                    team: "B"
+                }
+
+                await player.discordMember.addRole(config.teams.B.role);
+            }
+            
+            await this.removePlayer(player);
+            await player.discordMember.addRole(server.role);
+            await server.commands.plugin.addPlayer(player.steam, i%2, player.getDiscordUser().username);
+        }
+        
+        return players;
+    }
+
     schema.post('save', async function (queue) {
         const Queue = queue.model("Queue");
         const Server = queue.model("Server");
@@ -173,7 +203,7 @@ module.exports = (schema) => {
 
                 if (!server) throw new Error("No free server found!");
 
-                const players = await divideTeams(queue, server, format); 
+                const players = await queue.divideTeams(server, format); 
                 const map = format.maps[Math.floor(Math.random() * format.maps.length)];
                 const match = new Match({
                     status: Match.status.SETUP,
@@ -200,6 +230,5 @@ module.exports = (schema) => {
                 log(`Failed to set role name for Queue ${queue.name}`, error);
             }
         }
-
     });
 }

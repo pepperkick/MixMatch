@@ -436,34 +436,6 @@ module.exports = async (app) => {
         }
     }
 
-    async function divideTeams(queue, server, format) {      
-        const players = {};
-
-        for (let i = 0; i < format.size * 2; i++) {
-            const player = await Player.findById(queue.players.pop());
-
-            if (i % 2 === 0) {
-                players[player.id] = {
-                    team: "A"
-                }
-
-                await player.discordMember.addRole(app.config.teams.A.role);
-            } else {
-                players[player.id] = {
-                    team: "B"
-                }
-
-                await player.discordMember.addRole(app.config.teams.B.role);
-            }
-            
-            await player.discordMember.addRole(server.role);
-            await queue.removePlayer(player);
-            await server.commands.plugin.addPlayer(player.steam, i%2, player.getDiscordUser().username);
-        }
-        
-        return players;
-    }
-
     async function registerCommand(options, handler) {
         try {
             await Command.Register(options, handler);
