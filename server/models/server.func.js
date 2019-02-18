@@ -76,7 +76,7 @@ module.exports = (schema) => {
 
     schema.methods.getCurrentMatch = async function () {
         const Match = await this.model('Match');
-        const matches = await Match.find({ status: { $in: [ Match.status.SETUP, Match.status.WAITING, Match.status.KNIFE, Match.status.LIVE ] }, server: this });
+        const matches = await Match.find({ status: { $in: [ Match.status.SETUP, Match.status.WAITING, Match.status.KNIFE, Match.status.VOTING, Match.status.LIVE ] }, server: this });
 
         if (matches.length > 0) {
             return matches[0];
@@ -296,13 +296,13 @@ module.exports = (schema) => {
 
         if (server.status === Server.status.UNKNOWN) {
             const match = await server.getCurrentMatch();
-
+            
             if (server.isRconConnected);
             else return setTimeout(() => server.setStatus(Server.status.UNKNOWN), 10000);
 
             if (match) { 
-                await match.setStatus(match.status);
                 await server.setStatus(Server.status.RESERVED);
+                await match.setStatus(match.status);
             }
             else server.setStatus(Server.status.FREE);
         } else if (server.status === Server.status.FREE) {

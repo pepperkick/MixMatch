@@ -101,6 +101,7 @@ module.exports = async (app) => {
 
         for (let server of servers) {
             const players = await server.getGameStatusPlayers();
+            const match = await server.getCurrentMatch();
 
             if (!players) continue;
     
@@ -114,15 +115,12 @@ module.exports = async (app) => {
                     return server.commands.kick(client, "Server is not accepting connections anymore");
                 }
     
-                if (player) {
-                    const match = await server.getCurrentMatch();
-                    
+                if (player) {                    
                     if (match) {
                         if (match.isPlayerPlaying(steamId));
                         else return server.commands.kick(client, "You are not assigned to this match");
                     } else return server.commands.kick(client, "Something went wrong, please try again later");
-                }
-                else return server.commands.kick(client, "Unable to verify your registration");
+                } else return server.commands.kick(client, "Unable to verify your registration");
             }
         }
     }
