@@ -40,7 +40,7 @@ async function processLine(raw) {
     const line = {};
 
     try {
-        line.date = raw.match(/[0-3][0-9].[0-1][0-9].[2][0][0-9][0-9]/)[0];
+        line.date = raw.match(/[0-3][0-9].[0-3][0-9].[2][0][0-9][0-9]/)[0];
         line.time = raw.match(/[0-2][0-9]:[0-9][0-9]:[0-9][0-9]/)[0];
         line.event = raw.split(' - ')[3];
         line.ip = raw.split(" - ")[0];

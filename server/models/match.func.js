@@ -126,6 +126,7 @@ module.exports = (schema) => {
                 
                 this.markModified('prefs');
 
+                await server.commands.announce("all", "Starting knife round");
                 await this.setStatus(statuses.KNIFE);
             }
         } else if ([statuses.KNIFE, statuses.VOTING, statuses.LIVE].includes(this.status)) {
@@ -148,6 +149,7 @@ module.exports = (schema) => {
             await server.sendCommand("mp_warmuptime 10");
             await server.sendCommand("mp_restartgame 1");
             await server.sendCommand("mp_warmup_start");
+            await server.commands.announce("all", "Going LIVE after warmup!");
         }
     }
 
@@ -197,7 +199,7 @@ module.exports = (schema) => {
     }
 
     schema.methods.handleOnSay = async function (event) {
-        log("HandleOnSay", match.status, event.data.message);
+        log("HandleOnSay", this.status, event.data.message);
 
         if (this.status === statuses.VOTING) {
             const msg = event.data.message;
@@ -208,7 +210,6 @@ module.exports = (schema) => {
 
             log(msg, team, steamId);
             log(team === this.prefs.knife_winner)
-            log(!this.prefs.vote_submitted[steamId])
 
             if (team === this.prefs.knife_winner && !this.prefs.vote_submitted[steamId]) {
                 log(msg === "!switch")
@@ -239,6 +240,12 @@ module.exports = (schema) => {
             } else {
                 const c = Math.floor(Math.random() * 2)
                 this.prefs.knife_winner = c === 0 ? Team.T : Team.CT; 
+            }
+
+            if (this.prefs.knife_winner === Team.T) {
+                await server.commands.announce("t", "Type !switch in chat if you want to switch teams.");
+            } else if (this.prefs.knife_winner === Team.CT) {
+                await server.commands.announce("ct", "Type !switch in chat if you want to switch teams.");
             }
 
             this.prefs.vote_switch = 0;
@@ -305,7 +312,7 @@ module.exports = (schema) => {
 
         log(`Checking match cooldown ${(new Date) - match.matchStartTime} / ${cooldown}`);
 
-        await server.discordRole.setName(`${server.name}: Waiting (${num}/${format.size * 2})`);
+        await server.discordRole.setName(`${server.name}: Waiting (${num < 0 ? 0 : num}/${format.size * 2})`);
 
         if (((new Date) - match.matchStartTime) > cooldown) {
             if (match.status === statuses.WAITING && num !== format.size * 2) {

@@ -4,6 +4,7 @@ module.exports = (schema, options) => {
             changeLevel: changeLevel.bind(this),
             kick: kick.bind(this),
             status: status.bind(this),
+            announce: announce.bind(this),
             console: { 
                 addHttpLogListener: conAddHttpLogListener.bind(this),
                 changeLevel: conChangeLevel.bind(this),
@@ -48,9 +49,28 @@ module.exports = (schema, options) => {
         } else {
             return this.commands.console.kick(client, reason);
         }
-    }
+    };
+
     async function status() {
         return this.commands.console.status();
+    };
+
+    async function announce(to, message) {
+        console.log(to, message);
+
+        if (await this.hasSourcemod()) {  
+            if (to === "all") {
+                return this.sendCommand(`sm_csay ${message}`);
+            } else if (to === "t") {
+                return this.sendCommand(`sm_psay @t ${message}`);
+            } else if (to === "ct") {
+                return this.sendCommand(`sm_psay @ct ${message}`);
+            } else {
+                return this.sendCommand(`sm_psay ${to} ${message}`);
+            }
+        } else {
+            return this.sendCommand(`say ${to} ${message}`);
+        }
     };
 
     async function smKick(client, reason = "Kicked by Console") {
@@ -77,5 +97,7 @@ module.exports = (schema, options) => {
         if (await this.hasSourcemodPlugin("mixmatch")) {
             return this.sendCommand(`mx_add_player ${steam} ${team} "${name}"`);
         }
+
+        return false;
     }
 }

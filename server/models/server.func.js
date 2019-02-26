@@ -293,6 +293,7 @@ module.exports = (schema) => {
 
     schema.post('save', async function (server) {
         const Server = server.model("Server");
+        await server.commands.announce("all", "test");
 
         if (server.status === Server.status.UNKNOWN) {
             const match = await server.getCurrentMatch();
