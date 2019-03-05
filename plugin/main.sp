@@ -1,4 +1,4 @@
-#define PLUGIN_VERSION  "1.0.3.7"
+#define PLUGIN_VERSION  "1.0.4.0"
 #define UPDATE_URL      ""
 #define TAG             "MIX"
 #define COLOR_TAG       "{matAmber}"
@@ -56,14 +56,16 @@ public OnPluginStart() {
     AddCommandListener(GameCommand_JoinTeam, "jointeam");
 
     Game_OnPluginLoad();
-    Ready_OnPluginLoad();
-
-    SetStatus(STATE_FREE);
 }
 
 public void OnClientAuthorized(int client) {
     if (IsClientSourceTV(client)) {
         Log("Client is SourceTV, Ignoring...");
+        return;
+    }
+    
+    if (IsFakeClient(client)) {
+        Log("Client is Bot, Ignoring...");
         return;
     }
 
@@ -200,10 +202,6 @@ public void Event_NameChange(Event event, const char[] name, bool dontBroadcast)
 }
 
 public Action:Timer_PostMatchCoolDown(Handle timer) {
-    if (GetStatus() == STATE_END) {
-        Reset(true);
-    }
-
     return Plugin_Stop;
 }
 

@@ -179,6 +179,12 @@ module.exports = (schema) => {
         }
     }
 
+    schema.methods.handleGameOver = async function (event) {
+        if (this.status === statuses.LIVE) {
+            this.setStatus(statuses.ENDED);
+        }
+    }
+
     schema.methods.handleOnKill = async function (event) {        
         if (this.status === statuses.KNIFE) {
             const kt = event.data.team;
@@ -232,6 +238,9 @@ module.exports = (schema) => {
     }
 
     schema.pre('save', async function (next) {
+        const Server = this.model("Server");
+        const server = await Server.findById(this.server);
+
         if (this.status === statuses.VOTING && this.prefs.vote_switch === 0) {
             if (this.prefs.knife_ts > this.prefs.knife_cts) {
                 this.prefs.knife_winner = Team.T;
@@ -260,6 +269,7 @@ module.exports = (schema) => {
     schema.post('save', async function (match) {
         const Match = match.model("Match");
         const Server = match.model("Server");
+        const Player = match.model("Player");
 
         const config = match.getConfig();
         const format = config.formats[match.format];
@@ -288,9 +298,11 @@ module.exports = (schema) => {
             await server.setStatus(Server.status.FREE);  
 
             for (let i in match.players) {
-                await match.players[i].discordMember.removeRole(app.config.teams.A.role);
-                await match.players[i].discordMember.removeRole(app.config.teams.B.role);
-                await match.players[i].discordMember.removeRole(server.role);
+                const player = await Player.findById(match.players[i]);
+
+                await player.discordMember.removeRole(app.config.teams.A.role);
+                await player.discordMember.removeRole(app.config.teams.B.role);
+                await player.discordMember.removeRole(server.role);
             }
         } else if (match.status === Match.status.ERROR) {     
             await server.setStatus(Server.status.FREE);  

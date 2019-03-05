@@ -22,6 +22,11 @@
         "line": "World triggered \"Round_End\""
     },
     {
+        "name": "onGameOver",
+        "line": "Game Over: competitive (.*?) (.*?) score (.*?):(.*?) after (.*?) min",
+        "arguments": [ "map_group", "map", "score_ct", "score_t", "time" ]
+    },
+    {
         "name": "onRCONCommand",
         "line": "rcon from \"(.*?)\": command \"(.*?)\"",
         "arguments": [ "ip", "command" ]

@@ -238,6 +238,12 @@ module.exports = (schema) => {
         if (match) await match.handleOnSay(event);
     }
 
+    schema.methods.Log_onGameOver = async function (event) {
+        const match = await this.getCurrentMatch();
+
+        if (match) await match.handleGameOver(event);
+    }
+
     schema.methods.Log_onPlayerConnected = async function (event) {
         const Player = this.model('Player');
         const { steamId, client } = event.data;

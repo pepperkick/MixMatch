@@ -34,5 +34,4 @@
 #if defined GAME_CSGO
 #include <cstrike>
 #include <games/csgo>
-#include <ready>
 #endif

@@ -27,7 +27,6 @@ public void Game_OnPlayerConnectPost(int client) {
 
     StringMap parameters = new StringMap();
     parameters.SetString("id", steam);
-    SendRequest("player_connected", parameters);
 
     ShowVGUIPanel(client, PANEL_CLASS_RED);
 
@@ -40,12 +39,6 @@ public Action GameCommand_JoinTeam(int client, const char[] command, int argc) {
 
 StartMatch() {
     Log("Match Started");
-
-    if (GetStatus() == STATE_WAITING) {
-        SetStatus(STATE_LIVE);
-
-        PrintToMinHudAll("Match is now live, Good Luck!");
-    }
 }
 
 ResetMatch() {
