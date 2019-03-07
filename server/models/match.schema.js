@@ -16,7 +16,8 @@ module.exports = {
             ref: "Server"
         }],
         format: String,
-        map: String
+        map: String,
+        stats: Object
     },
     options: {
         versionKey: false

@@ -154,8 +154,21 @@ module.exports = (schema) => {
     }
 
     schema.methods.handleOnRoundStart = async function (event) {
-        if (this.status === statuses.KNIFE) {
+        if (this.status === statuses.LIVE) {
+            this.stats.round++;
 
+            const stats = {};
+            for (let i in this.players) {
+                stats[i] = {
+                    kills: 0,
+                    deaths: 0
+                }
+            }
+
+            this.stats.rounds[this.stats.round] = stats;
+            this.markModified('stats');
+
+            await this.save();
         }
     }
 
@@ -176,6 +189,14 @@ module.exports = (schema) => {
             }
         } else if (this.status === statuses.VOTING) {
             this.setStatus(statuses.LIVE);
+
+            this.stats = {
+                round: 0,
+                rounds: []
+            };
+
+            this.markModified('stats');
+            await this.save();
         }
     }
 
@@ -200,6 +221,22 @@ module.exports = (schema) => {
 
             log(this.prefs);
             this.markModified('prefs');
+            await this.save();    
+        } else if (this.status === statuses.LIVE) {
+            const kid = event.data.steamId;
+            const vid = event.data.victim_steamId;
+            
+            const killer = await Player.findBySteam(kid);
+            const victim = await Player.findBySteam(vid);
+
+            if (kid === vid) {
+                this.stats.rounds[this.stats.round][killer.id].deaths++;
+            } else {
+                this.stats.rounds[this.stats.round][killer.id].kills++;
+                this.stats.rounds[this.stats.round][victim.id].deaths++;
+            }
+
+            this.markModified('stats');
             await this.save();
         }
     }
