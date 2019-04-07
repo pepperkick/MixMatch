@@ -56,17 +56,27 @@ module.exports = (schema, options) => {
     };
 
     async function announce(to, message) {
-        console.log(to, message);
-
         if (await this.hasSourcemod()) {  
-            if (to === "all") {
-                return this.sendCommand(`sm_csay ${message}`);
-            } else if (to === "t") {
-                return this.sendCommand(`sm_psay @t ${message}`);
-            } else if (to === "ct") {
-                return this.sendCommand(`sm_psay @ct ${message}`);
+            if (await this.hasSourcemodPlugin("mixmatch")) {
+                if (to === "all") {
+                    return this.sendCommand(`mx_send_player_chat_all "${message}"`);
+                } else if (to === "t") {
+                    return this.sendCommand(`mx_send_player_chat_team 2 "${message}"`);
+                } else if (to === "ct") {
+                    return this.sendCommand(`mx_send_player_chat_team 3 "${message}"`);
+                } else {
+                    return this.sendCommand(`mx_send_player_chat ${to} "${message}"`);
+                }
             } else {
-                return this.sendCommand(`sm_psay ${to} ${message}`);
+                if (to === "all") {
+                    return this.sendCommand(`sm_csay ${message}`);
+                } else if (to === "t") {
+                    return this.sendCommand(`sm_psay @t ${message}`);
+                } else if (to === "ct") {
+                    return this.sendCommand(`sm_psay @ct ${message}`);
+                } else {
+                    return this.sendCommand(`sm_psay ${to} ${message}`);
+                }
             }
         } else {
             return this.sendCommand(`say ${to} ${message}`);

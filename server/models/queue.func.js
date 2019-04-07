@@ -129,7 +129,7 @@ module.exports = (schema) => {
         const message = await this.getDiscordTextChannel().send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
 
         if (!message) {
-            throw new Error(`Failed to send message to channel ${channel.id}`);
+            throw new Error(`Failed to send message to queue channel ${this.name}`);
         }
 
         return message;

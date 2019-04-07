@@ -89,7 +89,7 @@ module.exports = (schema) => {
         const message = await this.getDiscordTextChannel().send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
 
         if (!message) {
-            throw new Error(`Failed to send message to channel ${channel.id}`);
+            throw new Error(`Failed to send message to server channel ${this.name}`);
         }
 
         return message;
@@ -141,13 +141,7 @@ module.exports = (schema) => {
         if (!this.discordChannel.children || this.discordChannel.children.size !== 4) {
             const guild = this.getDiscordGuild();
 
-            if (this.discordChannel.children) {
-                this.discordChannel.children.every(async function (channel) {
-                    await channel.delete();
-
-                    return true;
-                });
-            }
+            await this.deleteDiscordChannels();
 
             let channel;
 
@@ -174,6 +168,15 @@ module.exports = (schema) => {
                 denied: [ 'CONNECT' ]
             }], `Server ${this.name} channel setup`);                
             await channel.setParent(this.discordChannel);
+        }
+    }
+
+    schema.methods.deleteDiscordChannels = async function () {
+        if (this.discordChannel.children) {
+            this.discordChannel.children.every(async function (channel) {
+                await channel.delete();
+                return true;
+            });
         }
     }
 
@@ -299,7 +302,6 @@ module.exports = (schema) => {
 
     schema.post('save', async function (server) {
         const Server = server.model("Server");
-        await server.commands.announce("all", "test");
 
         if (server.status === Server.status.UNKNOWN) {
             const match = await server.getCurrentMatch();

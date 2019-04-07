@@ -20,6 +20,7 @@
 #include <sdktools>
 
 #include <libs/hud>
+#include <libs/announce>
 #include <libs/player>
 
 #include <cvars>

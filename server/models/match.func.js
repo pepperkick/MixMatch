@@ -323,7 +323,33 @@ module.exports = (schema) => {
             await server.discordRole.setName(`${server.name}: Waiting (0/${format.size * 2})`);
             const interval = setInterval(function () {
                 checkMatchStatus(match, interval);
-            }, 30000)
+            }, 30000);
+            await server.sendDiscordMessage({ embed: {
+                color: 0x00BCD4,
+                title: `Server ${server.name}`,
+                fields: [
+                    {
+                        name: 'Status',
+                        value: 'Waiting for players to join'
+                    },
+                    {
+                        name: "Connect",
+                        value: `steam://connect/${server.ip}:${server.port}`,
+                        inline: false
+                    },
+                    {
+                        name: 'Format',
+                        value: match.format,
+                        inline: true
+                    },  
+                    {
+                        name: 'Map',
+                        value: match.map,
+                        inline: false
+                    } 
+                ],
+                timestamp: new Date()
+            }});
         } else if (match.status === Match.status.KNIFE) {
             await server.discordRole.setName(`${server.name}: Knife Round`);
         }  else if (match.status === Match.status.VOTING) {
@@ -333,13 +359,14 @@ module.exports = (schema) => {
         } else if (match.status === Match.status.ENDED) {
             await server.discordRole.setName(`${server.name}: Ended`);      
             await server.setStatus(Server.status.FREE);  
+            await server.deleteDiscordChannels();  
 
             for (let i in match.players) {
                 const player = await Player.findById(match.players[i]);
 
+                await player.discordMember.removeRole(server.role);
                 await player.discordMember.removeRole(app.config.teams.A.role);
                 await player.discordMember.removeRole(app.config.teams.B.role);
-                await player.discordMember.removeRole(server.role);
             }
         } else if (match.status === Match.status.ERROR) {     
             await server.setStatus(Server.status.FREE);  

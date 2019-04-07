@@ -23,7 +23,7 @@ module.exports = async (schema, options) => {
                 return category.children.get(channels[id].id);
         }
 
-        throw new Error(`Unable to find text channel for queue ${this.name}`);
+        throw new Error(`Unable to find text channel for ${this.name}`);
     }
 
     schema.methods.getDiscordVoiceChannel = function () {
@@ -35,7 +35,7 @@ module.exports = async (schema, options) => {
                 return category.children.get(channels[id].id);
         }
 
-        throw new Error(`Unable to find voice channel for queue ${this.name}`);
+        throw new Error(`Unable to find voice channel for ${this.name}`);
     }
 
     schema.methods.getDiscordTeamAChannel = function () {
@@ -47,7 +47,7 @@ module.exports = async (schema, options) => {
                 return category.children.get(channels[id].id);
         }
 
-        throw new Error(`Unable to find team A voice channel for queue ${this.name}`);
+        throw new Error(`Unable to find team A voice channel for ${this.name}`);
     }
 
     schema.methods.getDiscordTeamBChannel = function () {
@@ -59,6 +59,6 @@ module.exports = async (schema, options) => {
                 return category.children.get(channels[id].id);
         }
 
-        throw new Error(`Unable to find team B voice channel for queue ${this.name}`);
+        throw new Error(`Unable to find team B voice channel for ${this.name}`);
     }
 }

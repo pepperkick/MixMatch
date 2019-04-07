@@ -29,6 +29,21 @@ module.exports = async (app) => {
         }
     });
 
+
+    registerCommand({ 
+        command: 'queue-format',
+        role: [ app.config.discord.roles.admin ]
+    }, async (args) => {
+        await changeQueueFormat(args)
+    });
+
+    registerCommand({ 
+        command: 'queue-reset',
+        role: [ app.config.discord.roles.admin ]
+    }, async (args) => {
+        await resetQueue(args)
+    });
+
     registerCommand({ command: 'reset_queues', role: [ app.config.discord.roles.admin ] }, 
     async (args) => {
         const queues_db = await Queue.find();
@@ -214,29 +229,13 @@ module.exports = async (app) => {
         if (prefs[queue.id]["cmd_flag"]) return;
 
         prefs[queue.id]["cmd_flag"] = true;
-
-        registerCommand({ 
-            command: 'format',
-            channel: queue.channel,
-            role: [ app.config.discord.roles.admin ]
-        }, async (args) => {
-            await changeQueueFormat(args, queue)
-        });
-    
-        registerCommand({ 
-            command: 'reset',
-            channel: queue.channel,
-            role: [ app.config.discord.roles.admin ]
-        }, async (args) => {
-            await resetQueue(args, queue)
-        });
     }
 
-    async function changeQueueFormat(args, queue) {
-        queue = await Queue.findById(queue.id);
+    async function changeQueueFormat(args) {
+        queue = await Queue.findByName(args.parameters[1]);
         
         const queue_config = app.config.queues[queue.name];
-        const format = args.parameters[1];
+        const format = args.parameters[2];
 
         if (!format) {
             let format_list = "";
@@ -421,9 +420,9 @@ module.exports = async (app) => {
         }
     }
 
-    async function resetQueue(args, queue) {
+    async function resetQueue(args) {
         try {
-            queue = await Queue.findById(queue.id);
+            queue = await Queue.findByName(args.parameters[1]);
 
             await queue.reset();
 

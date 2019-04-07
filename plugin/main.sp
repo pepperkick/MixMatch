@@ -1,4 +1,4 @@
-#define PLUGIN_VERSION  "1.0.4.0"
+#define PLUGIN_VERSION  "1.0.4.1"
 #define UPDATE_URL      ""
 #define TAG             "MIX"
 #define COLOR_TAG       "{matAmber}"
@@ -50,6 +50,8 @@ public OnPluginStart() {
     RegConsoleCmd("mx_add_player", Command_AddPlayer);   
     RegConsoleCmd("mx_get_player_client", Command_GetPlayerClient);  
     RegConsoleCmd("mx_send_player_chat", Command_SendPlayerChat);  
+    RegConsoleCmd("mx_send_player_chat_team", Command_SendPlayerChatTeam);  
+    RegConsoleCmd("mx_send_player_chat_all", Command_SendPlayerChatAll);  
 
     HookEvent("player_changename", Event_NameChange, EventHookMode_Post);
 
@@ -181,7 +183,26 @@ public Action Command_SendPlayerChat(int client, int args) {
     GetCmdArg(2, msg, sizeof(msg));
     player = StringToInt(client, 10);
 
-    PrintToChat(player, "[%s] %s", TAG, msg);
+    PrintToClient(player, msg);
+}
+
+public Action Command_SendPlayerChatTeam(int client, int args) {
+    char client[128], msg[128];
+    int team;
+    
+    GetCmdArg(1, client, sizeof(client));
+    GetCmdArg(2, msg, sizeof(msg));
+    team = StringToInt(client, 10);
+
+    PrintToClientTeam(team, msg);
+}
+
+public Action Command_SendPlayerChatAll(int client, int args) {
+    char msg[128];
+    
+    GetCmdArg(1, msg, sizeof(msg));
+
+    PrintToClientAll(msg);
 }
 
 public void Event_NameChange(Event event, const char[] name, bool dontBroadcast) {
