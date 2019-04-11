@@ -29,13 +29,13 @@ module.exports.init = async() => {
         ]
     });
 
-    const Queue = app.connection.model("Queue");
+    const Server = app.connection.model("Server");
     
-    // attach bot
-    bot(app);
-
     // attach events
     events(app);
+
+    // attach bot
+    bot(app);
     
     // attach routes
     app.use(router(app));
@@ -47,26 +47,25 @@ module.exports.init = async() => {
     app.listen(app.config.port);
     
     log('application listening on port', app.config.port);
-
     
     process.on('uncaughtException',  async (error) => {
         log('Caught exception: ', error, error.stack);
 
         if (error.code === "ECONNREFUSED" && error.address && error.port) {
-            const queue = await Queue.findByIp(error.address, error.port);
+            const server = await Server.findByIp(error.address, error.port);
 
-            if (queue) {
-                setTimeout(() => queue.setStatus(Queue.status.UNKNOWN), 30000);
+            if (server) {
+                setTimeout(() => server.setStatus(Server.status.UNKNOWN), 30000);
                 
                 return;
             }
         }
         
         if (error.code === "ETIMEDOUT" && error.address && error.port) {
-            const queue = await Queue.findByIp(error.address, error.port);
+            const server = await Server.findByIp(error.address, error.port);
 
-            if (queue) {
-                setTimeout(() => queue.setStatus(Queue.status.UNKNOWN), 30000);
+            if (server) {
+                setTimeout(() => server.setStatus(Server.status.UNKNOWN), 30000);
                 
                 return;
             }

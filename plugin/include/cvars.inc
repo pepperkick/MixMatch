@@ -1,4 +1,4 @@
-Handle g_hcGameStatus = INVALID_HANDLE;
+
 Handle g_hcRestrictPlayers = INVALID_HANDLE;
 
 public CreateCvars() {
@@ -9,15 +9,6 @@ public CreateCvars() {
         "MixMatch Plugin Version",
         FCVAR_SPONLY | FCVAR_REPLICATED | FCVAR_NOTIFY
     );
-
-    // CVar to store the status of the game
-    g_hcGameStatus =
-        CreateConVar(
-            "mx_match_status",
-            "unknown",
-            "Status of the match",
-            FCVAR_NOTIFY | FCVAR_DONTRECORD
-        );
 
     // CVar to whether restrict players or not
     g_hcRestrictPlayers =

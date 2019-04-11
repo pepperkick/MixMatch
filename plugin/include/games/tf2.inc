@@ -39,20 +39,17 @@ public Action GameCommand_JoinTeam(int client, const char[] command, int argc) {
 
 StartMatch() {
     Log("Match Started");
+    LogToGame("World triggered \"Match_Start\"");
 }
 
 ResetMatch() {
     Log("Match Reset");
+    LogToGame("World triggered \"Match_Reset\"");
 }
 
 EndMatch(bool:endedMidgame) {
     Log("Match Ended: %d", endedMidgame);
-
-    if (GetStatus() == STATE_LIVE) {
-        SetStatus(STATE_END);
-    }
-
-    CreateTimer(30 * 1.0, Timer_PostMatchCoolDown);
+    LogToGame("World triggered \"Match_End\"");
 }
 
 PostStatusUpdate() {

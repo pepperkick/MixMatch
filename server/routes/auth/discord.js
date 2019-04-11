@@ -20,7 +20,7 @@ module.exports = (app) => {
         const Player = app.connection.model('Player');
         const Discord = app.discord;
         const DMChannel = await Discord.getDMChannel(profile.id);
-  
+
         log(accessToken);
         log(refreshToken);
         log(profile);
@@ -42,7 +42,7 @@ module.exports = (app) => {
         if (steamIDs.length > 0) {
           const player_prev = await Player.findOne({ steam: steamIDs[0] });
   
-          if (player_prev) {
+          if (player_prev && DMChannel) {
             return Discord.sendDm(DMChannel, {
               text: "An user already exists with the connected steam id, if you are the owner of steam account or cannot access your original discord account then please contact admin to resolve this issue."
             });
@@ -64,17 +64,21 @@ module.exports = (app) => {
   
           Discord.assignRole(app.config.discord.guild, profile.id, app.config.discord.roles.player);
   
-          Discord.sendToChannel(DMChannel, {
-            text: "Thank you for joining with us!"
-          });
+          if (DMChannel) {
+            Discord.sendToChannel(DMChannel, {
+              text: "Thank you for joining with us!"
+            });
+          }
   
           return done(null, profile);
         }
   
-        Discord.sendToChannel(DMChannel, {
-          text: "You need to connect your steam account with discord to continue."
-        });
-  
+        if (DMChannel) {
+          Discord.sendToChannel(DMChannel, {
+            text: "You need to connect your steam account with discord to continue."
+          });
+        }
+    
         done("No steam connection", null);
   
         // TODO: Handle multiple steam connections (Discord menu system has to be made)

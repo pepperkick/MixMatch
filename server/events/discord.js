@@ -6,17 +6,12 @@ module.exports = app => {
     const Command = app.object.command;
     const Discord = app.discord;
 
-    Discord.on("newMember", async member => {
-        try {
-            const channel = await member.user.createDM();  
-            const message = {
-                text: `Thank you for joining our discord, please visit the following link to register with us so you can enjoy the matches.\n${app.config.registerLink}/auth/discord`
-            }
+    if (Discord.bot.status == 0) {
+        CheckMembers();
+    }
 
-            await Discord.sendToChannel(channel, message);
-        } catch (error) {
-            log(error);
-        }
+    Discord.on("ready", () => {
+        CheckMembers();
     });
 
     Discord.on("message", async message => {  
@@ -46,6 +41,30 @@ module.exports = app => {
 
                 await message.reply(error.message);
             }
+        }
+    });
+
+    Discord.on("newMember", async member => {
+        try {
+            const channel = await member.user.createDM();  
+            const player = await Player.findByDiscord(member.user);
+
+            if (player) {
+                const message = {
+                    text: `Welcome back to our discord, we will put you right back where you left.`
+                }
+
+                await Discord.assignRole(app.config.discord.guild, player.discord, app.config.discord.roles.player);
+                await Discord.sendToChannel(channel, message);
+            } else {
+                const message = {
+                    text: `Thank you for joining our discord, please visit the following link to register with us so you can enjoy the matches.\n${app.config.registerLink}/auth/discord`
+                }
+
+                await Discord.sendToChannel(channel, message);
+            }
+        } catch (error) {
+            log(error);
         }
     });
 
@@ -83,4 +102,18 @@ module.exports = app => {
             await Discord.login();
         }
     });
+
+    async function CheckMembers() {
+        log("Checking Members...")
+        const guild = await Discord.getGuild(app.config.discord.guild);
+        const members = guild.members;
+
+        for await ([ id, member ] of members) {
+            const player = await Player.findByDiscord(member.user);
+
+            if (player) {
+                await Discord.assignRole(app.config.discord.guild, player.discord, app.config.discord.roles.player);                
+            }
+        }        
+    }
 }

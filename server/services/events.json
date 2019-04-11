@@ -86,9 +86,17 @@
         "line": "\"(.*?)<(.*?)><(.*?)><(.*?)>\" say_team \"(.*?)\"",
         "arguments": [ "name", "client", "steamId", "team", "message" ]
     },
-    {
+    {   
         "name": "onMatchStart",
         "line": "World triggered \"Match_Start\" on \"(.*?)\"",
         "arguments": [ "map" ]
+    },
+    {   
+        "name": "onMatchStart",
+        "line": "World triggered \"Match_Start\""
+    },
+    {   
+        "name": "onMatchEnd",
+        "line": "World triggered \"Match_End\""
     }
 ]

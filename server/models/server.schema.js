@@ -19,7 +19,8 @@ module.exports = {
         rcon: String,
         channel: String,
         format: String,
-        role: String
+        role: String,
+        game: String
     },
     options: {
         versionKey: false

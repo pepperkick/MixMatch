@@ -8,7 +8,7 @@ const log = require('debug')('app:models:server');
 
 let cache = {};
 
-module.exports = (schema) => {
+module.exports = (schema, app) => {
     const statuses = Object.freeze({
         UNKNOWN: 'UNKNOWN',
         FREE: 'FREE',
@@ -31,6 +31,16 @@ module.exports = (schema) => {
     }
 
     schema.statics.findByIp = async function (ip) {
+        if (typeof ip === 'string') {
+            const parts = ip.split(":");
+
+            if (parts.length > 1) {
+                return await this.findOne({ ip: parts[0], port: parts[1] });
+            } else {                
+                return await this.findOne({ ip: parts[0] });
+            }
+        }
+
         return await this.findOne({ ip });
     }
 
@@ -112,7 +122,13 @@ module.exports = (schema) => {
 
         if (!status) return -1;
 
-        const regex = /# ( |)(.*?) (.*?) \"(.*?)\" (.*?) (.*?):(.*?) (.*?) (.*?) (.*?) (.*?) (.*?)\n/gmi;
+        let regex;
+
+        if (this.game === "tf2") {
+            regex = /# ( |)(.*?) (.*?) \"(.*?)\"(.*?)\[(.*?)\](.*)/gmi;
+        } else if (this.game === "csgo") {
+            regex = /# ( |)(.*?) (.*?) \"(.*?)\" (.*?) (.*?):(.*?) (.*?) (.*?) (.*?) (.*?) (.*?)\n/gmi;
+        }
         const data = status.match(regex);
         const players = [];
 
@@ -136,7 +152,7 @@ module.exports = (schema) => {
     schema.methods.createDiscordChannels = async function () {
         log(`Creating discord channels for server ${this.name}`);
 
-        const config = this.getConfig();
+        const config = app.config;
 
         if (!this.discordChannel.children || this.discordChannel.children.size !== 4) {
             const guild = this.getDiscordGuild();
@@ -145,9 +161,14 @@ module.exports = (schema) => {
 
             let channel;
 
+            log(this.role);
+
             channel = await guild.createChannel("general", "text", [{
-                id: config.discord.roles.player,
-                allowed: [ 'SEND_MESSAGES' ]
+                id: this.role,
+                allowed: [ 'SEND_MESSAGES', 'READ_MESSAGES' ]
+            }, {
+                id: guild.id,
+                denied: [ 'SEND_MESSAGES', 'READ_MESSAGES' ]
             }], `Server ${this.name} channel setup`);
             await channel.setParent(this.discordChannel);
 
@@ -221,6 +242,12 @@ module.exports = (schema) => {
         const match = await this.getCurrentMatch();
 
         if (match) await match.handleOnMatchStart(event);
+    };
+
+    schema.methods.Log_onMatchEnd = async function (event) {
+        const match = await this.getCurrentMatch();
+
+        if (match) await match.handleOnMatchEnd(event);
     };
 
     schema.methods.Log_onKill = async function (event) {
@@ -307,7 +334,7 @@ module.exports = (schema) => {
             const match = await server.getCurrentMatch();
             
             if (server.isRconConnected);
-            else return setTimeout(() => server.setStatus(Server.status.UNKNOWN), 10000);
+            else return setTimeout(() => server.retryRconConnection(), 10000);
 
             if (match) { 
                 await server.setStatus(Server.status.RESERVED);

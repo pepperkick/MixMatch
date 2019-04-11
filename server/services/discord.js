@@ -17,7 +17,7 @@ module.exports = async (app) => {
 
         em.emit("ready");
     });
- 
+
     // Emitted when the bot can read a new message
     bot.on('message', async message => {
         if (message.author.id === bot.user.id) return;      // Filter messages sent by the bot itself
@@ -31,7 +31,7 @@ module.exports = async (app) => {
         if (member.guild.id !== app.config.discord.guild) return;   // Filter out new members from other guilds that the bot might be in
 
         log(`New member joined the guild ${member.user.id}`)
-  
+
         em.emit("newMember", member);
     });
 
@@ -60,11 +60,11 @@ module.exports = async (app) => {
         }
 
         const message = await channel.send(options.text ? options.text : '', options.embed ? { embed: options.embed } : null);
-      
+    
         if (!message) {
             throw new Error(`Failed to send message to channel ${channel.id}`);
         }
-      
+    
         return message;
     }      
 
@@ -78,6 +78,11 @@ module.exports = async (app) => {
 
     async function getDMChannel(channel_id) {
         const user = await getUser(channel_id);
+
+        if (!user) {
+            return;
+        }
+
         let channel = await user.dmChannel;
 
         if (!channel) {

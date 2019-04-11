@@ -1,4 +1,4 @@
-#define PLUGIN_VERSION  "1.0.4.1"
+#define PLUGIN_VERSION  "1.0.5"
 #define UPDATE_URL      ""
 #define TAG             "MIX"
 #define COLOR_TAG       "{matAmber}"
@@ -9,8 +9,10 @@
 #define RETRY_INTERVAL  3
 #define CONFIG_DIR      "mixmatch"
 
+#define LOG_BUFFERSIZE 768
+
 #define ALLOWBOT
-#define GAME_CSGO
+#define GAME_TF2
 
 public Plugin:myinfo = {
     name = "MixMatch",
@@ -20,10 +22,6 @@ public Plugin:myinfo = {
     url = "https://pepperkick.com"
 }
 
-char HostIP[128];
-char HostPort[8];
-char ServerName[16];
-char ServerFormat[16];
 int ServerTeamSize;
 
 ArrayList PlayerSteam;
@@ -175,7 +173,7 @@ public Action Command_ListPlayers(int client, int args) {
     }
 }
 
-public Action Command_SendPlayerChat(int client, int args) {
+public Action Command_SendPlayerChat(int c, int args) {
     char client[128], msg[128];
     int player;
     
@@ -186,7 +184,7 @@ public Action Command_SendPlayerChat(int client, int args) {
     PrintToClient(player, msg);
 }
 
-public Action Command_SendPlayerChatTeam(int client, int args) {
+public Action Command_SendPlayerChatTeam(int c, int args) {
     char client[128], msg[128];
     int team;
     
@@ -216,14 +214,12 @@ public void Event_NameChange(Event event, const char[] name, bool dontBroadcast)
 
     char playerName[32];
     if (PlayerName.GetString(steam, playerName, sizeof(playerName))) {
-        if (!StrEqual(newName, playerName)) {
+        if (StrEqual(newName, playerName)) {}
+        else if (StrContains(newName, playerName)) {}
+        else {
             SetClientName(client, playerName);
         }
     }
-}
-
-public Action:Timer_PostMatchCoolDown(Handle timer) {
-    return Plugin_Stop;
 }
 
 public void Reset(bool notify) {

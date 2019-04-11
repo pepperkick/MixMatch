@@ -1,5 +1,5 @@
 #if defined _tf2_hud_included
- #endinput
+#endinput
 #endif
 #define _tf2_hud_included
 
@@ -23,7 +23,7 @@ stock PrintToMinHud(client, const String:msg[], any:...) {
 	if (!IsClientInAnyTeam(client)) return;
 
 	if (!IsClientValid(client)) {
-	    QueryClientConVar(client, "cl_hud_minmode", ConVarQuery_MinMode);
+		QueryClientConVar(client, "cl_hud_minmode", ConVarQuery_MinMode);
     }
 }
 
@@ -40,7 +40,7 @@ public void ConVarQuery_MinMode(QueryCookie cookie, int client,
 		AcceptEntityInput(entity, "Display", entity, entity);
 		CreateTimer(10.0, KillGameText, entity);
 	} else {
-		PrintToHud(client, minhudBuffer);
+		PrintToHud(g_hoHud, client, minhudBuffer);
 	}
 }
 

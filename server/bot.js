@@ -117,13 +117,20 @@ module.exports = async (app) => {
         for (let server of servers) {
             const players = await server.getGameStatusPlayers();
             const match = await server.getCurrentMatch();
-
+            
             if (!players) continue;
     
             for (let i = 0; i < players.length; i++) {
                 const info = await Player.breakdownPlayerStatusLine(players[i]);
-                const steamId = info[5];
                 const client = info[2];
+
+                let steamId;
+                if (server.game === "tf2") {
+                    steamId = `[${info[5]}]`;
+                } else {
+                    steamId = info[5];
+                }
+
                 const player = await Player.findBySteam(steamId);
 
                 if (server.status === Server.status.FREE) {
@@ -151,7 +158,11 @@ module.exports = async (app) => {
         log(`${server.name} RCON Connected Event`);
         
         try {
-            await server.commands.console.addHttpLogListener(`http://${app.config.host}:${app.config.port}/log_listener`);
+            if (server.game === "tf2") {
+                await server.commands.console.addLogListener(`${app.config.host}:${app.config.udpListener}`);
+            } else if (server.game === "csgo") {
+                await server.commands.console.addHttpLogListener(`http://${app.config.host}:${app.config.port}/log_listener`);
+            }
 
             log(`Log listener added to server ${server.name}`);
         } catch (error) {
@@ -172,8 +183,6 @@ module.exports = async (app) => {
     }
 
     async function onPlayerLeftQueue(player) {
-        await player.discordMember.removeRole(app.config.teams.A.role);
-        await player.discordMember.removeRole(app.config.teams.B.role);
     }
 
     async function onNewPlayer(user) {
@@ -212,7 +221,8 @@ module.exports = async (app) => {
             port: server.port,
             rcon: server.rcon,
             channel: server.channel,
-            role: server.role
+            role: server.role,
+            game: server.game
         });
 
         try {

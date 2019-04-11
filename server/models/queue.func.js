@@ -2,7 +2,7 @@ const Exception = require("../objects/exception");
 
 const log = require('debug')('app:models:queue');
 
-module.exports = (schema) => {
+module.exports = (schema, app) => {
     const statuses = Object.freeze({
         FREE: 'FREE',
         ASSIGNING: 'ASSIGNING',
@@ -137,29 +137,26 @@ module.exports = (schema) => {
 
     schema.methods.divideTeams = async function (server, format) {      
         const Player = await this.model('Player');
-        const config = this.getConfig();
         const players = {};
 
         for (let i = 0; i < format.size * 2; i++) {
             const player = await Player.findById(this.players.pop());
 
             if (i % 2 === 0) {
+                await player.discordMember.addRole(app.config.teams.A.role);
                 players[player.id] = {
                     team: "A"
                 }
-
-                await player.discordMember.addRole(config.teams.A.role);
             } else {
+                await player.discordMember.addRole(app.config.teams.B.role);
                 players[player.id] = {
                     team: "B"
                 }
-
-                await player.discordMember.addRole(config.teams.B.role);
             }
             
             await this.removePlayer(player);
-            await player.discordMember.addRole(server.role);
             await server.commands.plugin.addPlayer(player.steam, i%2, player.getDiscordUser().username);
+            await player.discordMember.addRole(server.role);
         }
         
         return players;
@@ -170,7 +167,7 @@ module.exports = (schema) => {
         const Server = queue.model("Server");
         const Match = queue.model("Match");
 
-        const config = queue.getConfig();
+        const config = app.config;
         const format = config.formats[queue.format];
         
         if (queue.status === Queue.status.UNKNOWN) {
@@ -215,7 +212,6 @@ module.exports = (schema) => {
 
                 try {    
                     await match.save();
-                    await server.execConfig(format.config);     
                     await queue.setStatus(Queue.status.FREE);
                 } catch (error) {
                     log(`Failed to setup match for queue ${queue.name} due to error`, error);

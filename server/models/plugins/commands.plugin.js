@@ -7,6 +7,7 @@ module.exports = (schema, options) => {
             announce: announce.bind(this),
             console: { 
                 addHttpLogListener: conAddHttpLogListener.bind(this),
+                addLogListener: conAddLogListener.bind(this),
                 changeLevel: conChangeLevel.bind(this),
                 kick: conKick.bind(this), 
                 status: conStatus.bind(this),
@@ -91,6 +92,10 @@ module.exports = (schema, options) => {
         return this.sendCommand(`logaddress_add_http "${url}"`);
     };
 
+    async function conAddLogListener(url) {
+        return this.sendCommand(`logaddress_add ${url}`);
+    };
+
     async function conChangeLevel(map) {
         return this.sendCommand(`changelevel ${map}`);
     };
@@ -104,10 +109,6 @@ module.exports = (schema, options) => {
     }
 
     async function pluginAddPlayer(steam, team, name) {
-        if (await this.hasSourcemodPlugin("mixmatch")) {
-            return this.sendCommand(`mx_add_player ${steam} ${team} "${name}"`);
-        }
-
-        return false;
+        return this.sendCommand(`mx_add_player ${steam} ${team} "${name}"`);
     }
 }

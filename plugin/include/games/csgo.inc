@@ -41,8 +41,6 @@ public void Game_Reset() {
 
 public Action Event_GameOver(Event event, const char[] name, bool dontBroadcast) {
     Log("Match Ended");
-
-    CreateTimer(15 * 1.0, Timer_PostMatchCoolDown);
 }
 
 public Action Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {

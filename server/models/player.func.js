@@ -28,7 +28,8 @@ module.exports = (schema, app) => {
     }
 
     schema.statics.findBySteam = async function (id) {
-        return await this.findOne({ steam: new SteamID(id).getSteamID64() });
+        const steam = new SteamID(id).getSteamID64();
+        return await this.findOne({ steam });
     }
 
     schema.statics.checkOrGet = async function (player) {
@@ -44,7 +45,14 @@ module.exports = (schema, app) => {
     }
 
     schema.statics.breakdownPlayerStatusLine = async function (line) {
-        const regex = "# ( |)(.*?) (.*?) \"(.*?)\" (.*?) (.*?):(.*?) (.*?) (.*?) (.*?) (.*?) (.*?)\n"
+        let regex;
+
+        if (app.config.game === "tf2") {
+            regex = /# (.*) (.*?) \"(.*?)\"(.*?)\[(.*)\]/;
+        } else if (app.config.game === "csgo") {
+            regex = "# ( |)(.*?) (.*?) \"(.*?)\" (.*?) (.*?):(.*?) (.*?) (.*?) (.*?) (.*?) (.*?)\n"
+        }
+
         const data = line.match(regex);
 
         return data;

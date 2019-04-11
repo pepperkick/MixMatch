@@ -3,7 +3,7 @@ const log = require('debug')('app:models:match');
 
 let cache = {};
 
-module.exports = (schema) => {
+module.exports = (schema, app) => {
     const statuses = Object.freeze({
         UNKNOWN: 'UNKNOWN',
         SETUP: 'SETUP',
@@ -79,10 +79,19 @@ module.exports = (schema) => {
         const format = config.formats[this.format];
         const { map } = event.data;
 
+        log("Map Changed:", map);
+
         if (this.status === statuses.SETUP && this.map === map) {
             const server = await Server.findById(this.server);
 
-            await server.execConfig(format.config);
+            log(app.config.game);
+
+            if (app.config.game === "tf2") {
+                await sleep(15000);
+                await server.execConfig(format.config);
+            } else if (app.config.game === "csgo") {
+                await server.execConfig(format.config);
+            }
 
             this.matchStartTime = new Date();
 
@@ -112,22 +121,24 @@ module.exports = (schema) => {
 
             await server.discordRole.setName(`${server.name}: Waiting (${num}/${format.size * 2})`);
 
-            if (num === format.size * 2) {
-                log(`Enough players have joined ${server.name}, turning on knife round.`);
+            if (app.config.game === "csgo") {
+                if (num === format.size * 2) {
+                    log(`Enough players have joined ${server.name}, turning on knife round.`);
 
-                await server.execConfig("csgo_kniferound");
-                await server.sendCommand("mp_warmuptime 15");
-                await server.sendCommand("mp_restartgame 1");
-                await server.sendCommand("mp_warmup_start");
+                    await server.execConfig("csgo_kniferound");
+                    await server.sendCommand("mp_warmuptime 15");
+                    await server.sendCommand("mp_restartgame 1");
+                    await server.sendCommand("mp_warmup_start");
 
-                this.prefs.knife_ts = 0;
-                this.prefs.knife_cts = 0;
-                this.prefs.vote_switch = 0;
-                
-                this.markModified('prefs');
+                    this.prefs.knife_ts = 0;
+                    this.prefs.knife_cts = 0;
+                    this.prefs.vote_switch = 0;
+                    
+                    this.markModified('prefs');
 
-                await server.commands.announce("all", "Starting knife round");
-                await this.setStatus(statuses.KNIFE);
+                    await server.commands.announce("all", "Starting knife round");
+                    await this.setStatus(statuses.KNIFE);
+                }
             }
         } else if ([statuses.KNIFE, statuses.VOTING, statuses.LIVE].includes(this.status)) {
             if (this.isPlayerPlaying(steamId));
@@ -140,35 +151,39 @@ module.exports = (schema) => {
         const server = await Server.findById(this.server);
         const config = this.getConfig();
         const format = config.formats[this.format];
-
-        if (this.status === statuses.KNIFE) {
-            await this.setStatus(statuses.VOTING);  
-            await sleep(30000);
-            await server.execConfig(format.config);
-            await sleep(5000);
-            await server.sendCommand("mp_warmuptime 10");
-            await server.sendCommand("mp_restartgame 1");
-            await server.sendCommand("mp_warmup_start");
-            await server.commands.announce("all", "Going LIVE after warmup!");
+        
+        if (app.config.game === "csgo") {
+            if (this.status === statuses.KNIFE) {
+                await this.setStatus(statuses.VOTING);  
+                await sleep(30000);
+                await server.execConfig(format.config);
+                await sleep(5000);
+                await server.sendCommand("mp_warmuptime 10");
+                await server.sendCommand("mp_restartgame 1");
+                await server.sendCommand("mp_warmup_start");
+                await server.commands.announce("all", "Going LIVE after warmup!");
+            }
         }
     }
 
     schema.methods.handleOnRoundStart = async function (event) {
         if (this.status === statuses.LIVE) {
-            this.stats.round++;
+            if (app.config.game === "csgo") {
+                this.stats.round++;
 
-            const stats = {};
-            for (let i in this.players) {
-                stats[i] = {
-                    kills: 0,
-                    deaths: 0
+                const stats = {};
+                for (let i in this.players) {
+                    stats[i] = {
+                        kills: 0,
+                        deaths: 0
+                    }
                 }
+
+                this.stats.rounds[this.stats.round] = stats;
+                this.markModified('stats');
+
+                await this.save();
             }
-
-            this.stats.rounds[this.stats.round] = stats;
-            this.markModified('stats');
-
-            await this.save();
         }
     }
 
@@ -185,7 +200,11 @@ module.exports = (schema) => {
             if (num > 1 && num < format.size * 2) {
                 await this.setStatus(statuses.CANCELED);                
             } else if (num === format.size * 2) {
-                await this.setStatus(statuses.KNIFE);        
+                if (app.config.game === "csgo") {
+                    await this.setStatus(statuses.KNIFE);
+                } else if (app.config.game === "tf2") {
+                    await this.setStatus(statuses.LIVE);
+                }
             }
         } else if (this.status === statuses.VOTING) {
             this.setStatus(statuses.LIVE);
@@ -197,6 +216,12 @@ module.exports = (schema) => {
 
             this.markModified('stats');
             await this.save();
+        }
+    }
+
+    schema.methods.handleOnMatchEnd = async function (event) {
+        if (this.status === statuses.LIVE) {
+            this.setStatus(statuses.ENDED);
         }
     }
 
@@ -352,26 +377,42 @@ module.exports = (schema) => {
             }});
         } else if (match.status === Match.status.KNIFE) {
             await server.discordRole.setName(`${server.name}: Knife Round`);
+            clearInterval(interval);
         }  else if (match.status === Match.status.VOTING) {
             await server.discordRole.setName(`${server.name}: Voting`);
         } else if (match.status === Match.status.LIVE) {
             await server.discordRole.setName(`${server.name}: Live`);
+            clearInterval(interval);
         } else if (match.status === Match.status.ENDED) {
             await server.discordRole.setName(`${server.name}: Ended`);      
             await server.setStatus(Server.status.FREE);  
-            await server.deleteDiscordChannels();  
+            await sleep(15000);
 
             for (let i in match.players) {
-                const player = await Player.findById(match.players[i]);
+                const player = await Player.findById(i);
 
+                await player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
                 await player.discordMember.removeRole(server.role);
                 await player.discordMember.removeRole(app.config.teams.A.role);
                 await player.discordMember.removeRole(app.config.teams.B.role);
             }
+
+            await server.deleteDiscordChannels();  
         } else if (match.status === Match.status.ERROR) {     
             await server.setStatus(Server.status.FREE);  
         }  else if (match.status === Match.status.CANCELED) {     
             await server.setStatus(Server.status.FREE);  
+
+            for (let i in match.players) {
+                const player = await Player.findById(i);
+
+                await player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
+                await player.discordMember.removeRole(server.role);
+                await player.discordMember.removeRole(app.config.teams.A.role);
+                await player.discordMember.removeRole(app.config.teams.B.role);
+            }
+
+            await server.deleteDiscordChannels();  
         } else {   
             await match.setStatus(Match.status.ERROR);  
         }
@@ -388,7 +429,8 @@ module.exports = (schema) => {
 
         log(`Checking match cooldown ${(new Date) - match.matchStartTime} / ${cooldown}`);
 
-        await server.discordRole.setName(`${server.name}: Waiting (${num < 0 ? 0 : num}/${format.size * 2})`);
+        if (match.status === statuses.WAITING)
+            await server.discordRole.setName(`${server.name}: Waiting (${num < 0 ? 0 : num}/${format.size * 2})`);
 
         if (((new Date) - match.matchStartTime) > cooldown) {
             if (match.status === statuses.WAITING && num !== format.size * 2) {
