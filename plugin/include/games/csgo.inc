@@ -24,6 +24,10 @@ public void Game_OnPlayerConnect(int client) {
 
 public void Game_OnPlayerConnectPost(int client) {
     char steam[32], name[32];
+    
+    if (IsClientSourceTV(client)) {
+        return;
+    }
 
     PlayerName.GetString(steam, name, sizeof(name));
     SetClientName(client, name);

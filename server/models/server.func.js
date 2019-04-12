@@ -259,13 +259,13 @@ module.exports = (schema, app) => {
     schema.methods.Log_onSayAll = async function (event) {
         const match = await this.getCurrentMatch();
 
-        if (match) await match.handleOnSay(event);
+        if (match) await match.handleOnSay(event, true);
     }
 
     schema.methods.Log_onSayTeam = async function (event) {
         const match = await this.getCurrentMatch();
 
-        if (match) await match.handleOnSay(event);
+        if (match) await match.handleOnSay(event, false);
     }
 
     schema.methods.Log_onGameOver = async function (event) {
@@ -274,11 +274,25 @@ module.exports = (schema, app) => {
         if (match) await match.handleGameOver(event);
     }
 
+    schema.methods.Log_onLogstfUpload = async function (event) {
+        const match = await this.getCurrentMatch();
+
+        if (match) await match.handleLogUpload(event);
+    }
+
+    schema.methods.Log_onDemostfUpload = async function (event) {
+        const match = await this.getCurrentMatch();
+
+        if (match) await match.handleDemoUpload(event);
+    }
+
     schema.methods.Log_onPlayerConnected = async function (event) {
         const Player = this.model('Player');
         const { steamId, client } = event.data;
 
         log(`Player ${steamId} connected to server ${this.name} (${this.status})`);
+
+        if (steamId === "BOT") return;
 
         if (this.status === statuses.UNKNOWN) {
             return await this.commands.kick(client, "Server is not ready to accept connections");
@@ -288,8 +302,6 @@ module.exports = (schema, app) => {
         } else {
             return await this.commands.kick(client, "Unable to join currently");
         }
-
-        if (steamId === "BOT") return;
 
         const player = await Player.findBySteam(steamId);
         const match = await this.getCurrentMatch();

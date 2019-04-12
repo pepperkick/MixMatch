@@ -40,6 +40,17 @@ module.exports = (schema, options) => {
         return true;
     }
 
+    schema.methods.hasPluginVar = async function (cvar) {
+        if (await this.hasSourcemod());
+        else return false;
+
+        const res = await this.sendCommand(cvar);
+
+        if (!res || res.includes("Unknown")) return false;
+
+        return true;
+    }
+
     async function changeLevel(map) {
         return this.commands.console.changeLevel(map);
     };
@@ -109,6 +120,7 @@ module.exports = (schema, options) => {
     }
 
     async function pluginAddPlayer(steam, team, name) {
-        return this.sendCommand(`mx_add_player ${steam} ${team} "${name}"`);
+        if (this.hasPluginVar("mixmatch_version"))
+            return this.sendCommand(`mx_add_player ${steam} ${team} "${name}"`);
     }
 }

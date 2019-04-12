@@ -50,6 +50,7 @@ public OnPluginStart() {
     RegConsoleCmd("mx_send_player_chat", Command_SendPlayerChat);  
     RegConsoleCmd("mx_send_player_chat_team", Command_SendPlayerChatTeam);  
     RegConsoleCmd("mx_send_player_chat_all", Command_SendPlayerChatAll);  
+    RegConsoleCmd("mx_get_teamscores", Command_GetTeamScores);  
 
     HookEvent("player_changename", Event_NameChange, EventHookMode_Post);
 
@@ -203,8 +204,19 @@ public Action Command_SendPlayerChatAll(int client, int args) {
     PrintToClientAll(msg);
 }
 
+public Action Command_GetTeamScores(int client, int args) {
+    int team1 = GetTeamScore(TEAM_1);
+    int team2 = GetTeamScore(TEAM_2);
+
+    PrintToServer("%d - %d", team1, team2);
+}
+
 public void Event_NameChange(Event event, const char[] name, bool dontBroadcast) {
     int client = GetClientOfUserId(event.GetInt("userid"));
+
+    if (IsClientSourceTV(client)) {
+        return;
+    }
 
     char newName[32];
     event.GetString("newname", newName, sizeof(newName));

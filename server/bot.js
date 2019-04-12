@@ -131,6 +131,8 @@ module.exports = async (app) => {
                     steamId = info[5];
                 }
 
+                if (steamId === "BOT") continue;
+
                 const player = await Player.findBySteam(steamId);
 
                 if (server.status === Server.status.FREE) {
@@ -165,6 +167,8 @@ module.exports = async (app) => {
             }
 
             log(`Log listener added to server ${server.name}`);
+
+            await server.setStatus(Server.status.UNKNOWN);
         } catch (error) {
             log(`Failed to add log listener to server ${server.name}`, error);
 

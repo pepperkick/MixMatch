@@ -266,8 +266,8 @@ module.exports = (schema, app) => {
         }
     }
 
-    schema.methods.handleOnSay = async function (event) {
-        log("HandleOnSay", this.status, event.data.message);
+    schema.methods.handleOnSay = async function (event, all=false) {
+        log("HandleOnSay", all, this.status, event.data.message);
 
         if (this.status === statuses.VOTING) {
             const msg = event.data.message;
@@ -280,7 +280,6 @@ module.exports = (schema, app) => {
             log(team === this.prefs.knife_winner)
 
             if (team === this.prefs.knife_winner && !this.prefs.vote_submitted[steamId]) {
-                log(msg === "!switch")
                 if (msg === "!switch") {
                     this.prefs.vote_switch += 1;
                     this.prefs.vote_submitted[steamId] = true;
@@ -296,6 +295,64 @@ module.exports = (schema, app) => {
 
                 await server.sendCommand("mp_swapteams 1"); 
             }
+        }
+    }
+
+    schema.methods.handleLogUpload = async function (event) {
+        const id = event.data.id;
+
+        this.prefs.logstf = id;
+        this.markModified('prefs');
+
+        log(`[LOGSTF] ${id}`);
+
+        await this.save();
+    }
+
+    schema.methods.handleDemoUpload = async function (event) {
+        const id = event.data.id;
+
+        this.prefs.demostf = id;
+        this.markModified('prefs');
+
+        log(`[DEMOSTF] ${id}`);
+
+        await this.save();
+    }
+
+    schema.methods.postEndResult = async function () {
+        const channel = app.config.discord.main;
+        const fields = [];
+        const embed = {
+            color: 0x00BCD4,
+            title: `Server`,
+            fields
+        }
+
+        fields.push({
+            name: 'Format',
+            value: this.format,
+            inline: true
+        });
+
+        fields.push({
+            name: 'Map',
+            value: this.map,
+            inline: true
+        });
+
+        if (this.prefs.logstf) {
+            fields.push({
+                name: 'Logs.tf',
+                value: this.prefs.logstf
+            });
+        }
+
+        if (this.prefs.demostf) {
+            fields.push({
+                name: 'Logs.tf',
+                value: this.prefs.demostf
+            });
         }
     }
 
@@ -385,8 +442,8 @@ module.exports = (schema, app) => {
             clearInterval(interval);
         } else if (match.status === Match.status.ENDED) {
             await server.discordRole.setName(`${server.name}: Ended`);      
-            await server.setStatus(Server.status.FREE);  
-            await sleep(15000);
+            
+            await sleep(30 * 1000);
 
             for (let i in match.players) {
                 const player = await Player.findById(i);
@@ -397,7 +454,12 @@ module.exports = (schema, app) => {
                 await player.discordMember.removeRole(app.config.teams.B.role);
             }
 
+            await sleep(30 * 1000);
+
+            await server.setStatus(Server.status.FREE);  
+            // await match.postEndResult();
             await server.deleteDiscordChannels();  
+            await server.commands.changeLevel(match.map);
         } else if (match.status === Match.status.ERROR) {     
             await server.setStatus(Server.status.FREE);  
         }  else if (match.status === Match.status.CANCELED) {     

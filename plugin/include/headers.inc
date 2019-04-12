@@ -14,6 +14,9 @@
 #define TEAM_SPC 4
 #endif
 
+#define TEAM_1 2
+#define TEAM_2 3
+
 // Core Includes
 #include <sourcemod>
 #include <morecolors>

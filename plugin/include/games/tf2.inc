@@ -16,6 +16,10 @@ public void Game_OnPlayerConnect(int client) {
 
 public void Game_OnPlayerConnectPost(int client) {
     char steam[32], name[32], team[4];
+    
+    if (IsClientSourceTV(client)) {
+        return;
+    }
 
     GetClientAuthId(client, AuthId_SteamID64, steam, sizeof(steam));
 

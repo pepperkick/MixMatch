@@ -98,5 +98,15 @@
     {   
         "name": "onMatchEnd",
         "line": "World triggered \"Match_End\""
+    },
+    {   
+        "name": "onLogstfUpload",
+        "line": "Logs.TF ID: (.*?)",
+        "arguments": [ "id" ]
+    },
+    {   
+        "name": "onDemostfUpload",
+        "line": "Demos.TF ID: (.*?)",
+        "arguments": [ "id" ]
     }
 ]
