@@ -6,6 +6,7 @@ let cache = {};
 module.exports = (schema, app) => {
     const statuses = Object.freeze({
         UNKNOWN: 'UNKNOWN',
+        PICKING: 'PICKING',
         SETUP: 'SETUP',
         WAITING: 'WAITING',
         KNIFE: 'KNIFE',
@@ -38,30 +39,43 @@ module.exports = (schema, app) => {
 
     schema.statics.status = statuses;
 
-    schema.statics.isPlayerAssigned = async function (id) {
-        const matches = this.find({ status: statuses.WAITING });
+    schema.statics.isPlayerSelected= async function (player) {
+        const matches = await this.find({ status: statuses.PICKING });
 
-        for (let i in matches) {
-            if (await matches[i].isPlayerPlaying(id)) return match;
+        for (let i = 0; i < matches.length; i++) {
+            if (await matches[i].isPlayerPlaying(player)) return matches[i];
         }
 
         return null;
     }
 
-    schema.statics.isPlayerPlaying = async function (id) {
-        const matches = this.find({ status: statuses.LIVE });
+    schema.statics.isPlayerWaiting = async function (player) {
+        const matches = await this.find({ status: statuses.WAITING });
 
-        for (let i in matches) {
-            if (await matches[i].isPlayerPlaying(id)) return match;
+        for (let i = 0; i < matches.length; i++) {
+            if (await matches[i].isPlayerPlaying(player)) return matches[i];
         }
 
         return null;
     }
 
-    schema.methods.isPlayerPlaying = async function (id) {
-        const player = await this.model("Player").findBySteam(id);
+    schema.statics.isPlayerPlaying = async function (player) {
+        const matches = await this.find({ status: statuses.LIVE });
 
+        for (let i = 0; i < matches.length; i++) {
+            if (await matches[i].isPlayerPlaying(player)) return matches[i];
+        }
+
+        return null;
+    }
+
+    schema.methods.isPlayerPlaying = async function (player) {
         if (this.players[player.id.toString()]) return true;
+        return false;
+    }
+
+    schema.methods.getPlayer = async function (player) {
+        if (this.players[player.id.toString()]) return this.players[player.id.toString()];
         return false;
     }
 
@@ -141,7 +155,8 @@ module.exports = (schema, app) => {
                 }
             }
         } else if ([statuses.KNIFE, statuses.VOTING, statuses.LIVE].includes(this.status)) {
-            if (this.isPlayerPlaying(steamId));
+            const player = await this.model("Player").findBySteam(steamId);
+            if (this.isPlayerPlaying(player));
             else return await server.commands.kick(client, "You cannot join this match");
         }
     }
@@ -298,26 +313,120 @@ module.exports = (schema, app) => {
         }
     }
 
-    schema.methods.handleLogUpload = async function (event) {
-        const id = event.data.id;
+    schema.methods.initPickPlayer = async function () {
+        const Player = this.model("Player");
+        const Match = this.model("Match");
+        const picking = this.selected.length % 2;
+        let capA, capB;
 
-        this.prefs.logstf = id;
-        this.markModified('prefs');
+        if (this.prefs.capA && this.prefs.capB) {
+            capA = this.prefs.capA;
+            capB = this.prefs.capB;
+        } else {
+            for (let i in this.players) {
+                if (this.players[i].team === "A" && this.players[i].captain) capA = i;
+                if (this.players[i].team === "B" && this.players[i].captain) capB = i;
+            }
 
-        log(`[LOGSTF] ${id}`);
+            for (let j = 0; j < this.selected.length; j++) {
+                if (this.selected[j].toString() == capA) {
+                    this.selected.splice(j, 1);
+                    break;
+                }
+            }
+            for (j = 0; j < this.selected.length; j++) {
+                if (this.selected[j].toString() == capB) {
+                    this.selected.splice(j, 1);
+                    break;
+                }
+            }
+    
+            this.prefs.capA = capA;
+            this.prefs.capB = capB;
 
-        await this.save();
+            this.markModified("prefs");
+            this.markModified("selected");
+            
+            return await this.save();
+        }
+
+        if (this.selected.length == 1) {
+            return await this.pickPlayer(0);
+        } else if (this.selected.length == 0) {
+            return await this.setStatus(statuses.SETUP);
+        }
+
+        const fields = [];
+        const embed = {
+            color: 0x00BCD4,
+            title: "Pick Menu",
+            description: "Reply !pick <number> to pick that player",
+            fields
+        }
+
+        let players = "";
+        for (let i = 0; i < this.selected.length; i++) {
+            const player = await Player.findById(this.selected[i]);
+
+            players += `**${i+1}**: ${player.discordMember.user.tag}\n`
+        }
+
+        fields.push({
+            name: "Players",
+            value: players
+        });
+
+        log(capA, capB, picking);
+        if (picking === 0) {
+            const player = await Player.findById(capA);
+            await player.discordMember.send("", { embed });
+        } else {
+            const player = await Player.findById(capB);
+            await player.discordMember.send("", { embed });
+        }
+            
+        const val = this.selected.length;
+
+        setInterval(async () => {            
+            const match = await Match.findById(this.id);
+            
+            if (match.selected.length === val) {
+                log("Captain took too long to pick, picking randomly");
+
+                const player = await match.pickPlayer(Math.floor(Math.random() * match.selected.length));
+
+                if (picking === 0) {
+                    const player = await Player.findById(capA);
+                    await player.discordMember.send(`Picked ${player.discordMember.user.tag} randomly as you took too long to pick`);
+                } else {
+                    const player = await Player.findById(capB);
+                    await player.discordMember.send(`Picked ${player.discordMember.user.tag} randomly as you took too long to pick`);
+                }
+            }
+        }, 15 * 1000);
     }
 
-    schema.methods.handleDemoUpload = async function (event) {
-        const id = event.data.id;
+    schema.methods.pickPlayer = async function (index) {
+        const Player = this.model("Player");
+        const picking = this.selected.length % 2;
+        const selected = this.selected[index];
+        const player = await Player.findById(selected);
 
-        this.prefs.demostf = id;
-        this.markModified('prefs');
+        if (!selected) return null;
 
-        log(`[DEMOSTF] ${id}`);
+        this.players[selected] = {
+            team: picking === 0 ? "A" : "B"
+        }
+
+        await player.discordMember.addRole(picking === 0 ? app.config.teams.A.role : app.config.teams.B.role);
+
+        this.selected.splice(index, 1);
+        this.markModified("players");
+        this.markModified("selected");
 
         await this.save();
+
+        return player;
     }
 
     schema.methods.postEndResult = async function () {
@@ -325,7 +434,7 @@ module.exports = (schema, app) => {
         const fields = [];
         const embed = {
             color: 0x00BCD4,
-            title: `Server`,
+            title: `Match Complete`,
             fields
         }
 
@@ -341,19 +450,7 @@ module.exports = (schema, app) => {
             inline: true
         });
 
-        if (this.prefs.logstf) {
-            fields.push({
-                name: 'Logs.tf',
-                value: this.prefs.logstf
-            });
-        }
-
-        if (this.prefs.demostf) {
-            fields.push({
-                name: 'Logs.tf',
-                value: this.prefs.demostf
-            });
-        }
+        await Discord.sendDiscordMessage(channel, { embed });
     }
 
     schema.pre('save', async function (next) {
@@ -394,7 +491,9 @@ module.exports = (schema, app) => {
         const format = config.formats[match.format];
         const server = await Server.findById(match.server);
 
-        if (match.status === Match.status.SETUP) {
+        if (match.status === Match.status.PICKING) {
+            await match.initPickPlayer();
+        } else if (match.status === Match.status.SETUP) {
             await server.commands.changeLevel(match.map);
             await server.createDiscordChannels();
             await server.moveDiscordPlayers();
@@ -406,32 +505,35 @@ module.exports = (schema, app) => {
             const interval = setInterval(function () {
                 checkMatchStatus(match, interval);
             }, 30000);
-            await server.sendDiscordMessage({ embed: {
-                color: 0x00BCD4,
-                title: `Server ${server.name}`,
-                fields: [
-                    {
-                        name: 'Status',
-                        value: 'Waiting for players to join'
-                    },
-                    {
-                        name: "Connect",
-                        value: `steam://connect/${server.ip}:${server.port}`,
-                        inline: false
-                    },
-                    {
-                        name: 'Format',
-                        value: match.format,
-                        inline: true
-                    },  
-                    {
-                        name: 'Map',
-                        value: match.map,
-                        inline: false
-                    } 
-                ],
-                timestamp: new Date()
-            }});
+            await server.sendDiscordMessage({ 
+                text: "@everyone",
+                embed: {
+                    color: 0x00BCD4,
+                    title: `Server ${server.name}`,
+                    fields: [
+                        {
+                            name: 'Status',
+                            value: 'Waiting for players to join'
+                        },
+                        {
+                            name: "Connect",
+                            value: `steam://connect/${server.ip}:${server.port}`,
+                            inline: false
+                        },
+                        {
+                            name: 'Format',
+                            value: match.format,
+                            inline: true
+                        },  
+                        {
+                            name: 'Map',
+                            value: match.map,
+                            inline: false
+                        } 
+                    ],
+                    timestamp: new Date()
+                }
+            });
         } else if (match.status === Match.status.KNIFE) {
             await server.discordRole.setName(`${server.name}: Knife Round`);
             clearInterval(interval);

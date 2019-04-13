@@ -217,6 +217,8 @@ module.exports = (schema, app) => {
             } else if (players[i].team === "B") {
                 player.discordMember.setVoiceChannel(this.getDiscordTeamBChannel()); 
             }
+        
+            await player.discordMember.addRole(this.role);
         }
     }
 

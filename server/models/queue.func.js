@@ -162,9 +162,30 @@ module.exports = (schema, app) => {
         return players;
     }
 
+    schema.methods.divideCaptains = async function(server, format, capA, capB) {    
+        const players = {};
+
+        players[capA.id.toString()] = {
+            team: "A",
+            captain: true
+        }
+        capA.discordMember.addRole(app.config.teams.A.role);
+        capA.discordMember.addRole(server.role);
+
+        players[capB.id.toString()] = {
+            team: "B",
+            captain: true
+        }
+        capB.discordMember.addRole(app.config.teams.B.role);
+        capB.discordMember.addRole(server.role);
+
+        return players;
+    }
+
     schema.post('save', async function (queue) {
         const Queue = queue.model("Queue");
         const Server = queue.model("Server");
+        const Player = queue.model("Player");
         const Match = queue.model("Match");
 
         const config = app.config;
@@ -197,24 +218,67 @@ module.exports = (schema, app) => {
                 log(`Enough players have joined ${queue.name}, finding a free server.`);
                 
                 const server = await Server.findFreeServer();
+                const map = format.maps[Math.floor(Math.random() * format.maps.length)];
+                const captains = [];
 
                 if (!server) throw new Error("No free server found!");
+                
+                if (format.size > 1) {
+                    for (let i = 0; i < queue.players.length; i++) {
+                        const id = queue.players[i];
+                        const player = await Player.findById(id);
 
-                const players = await queue.divideTeams(server, format); 
-                const map = format.maps[Math.floor(Math.random() * format.maps.length)];
-                const match = new Match({
-                    status: Match.status.SETUP,
-                    server,
-                    players,
-                    map,
-                    format: queue.format
-                });
+                        if (player.discordMember.roles.get(app.config.discord.roles.captain)) captains.push(id);
+                    }
+                } else {
+                    log("Only 2 players can play this mode, ignoring captains");
+                }
 
-                try {    
-                    await match.save();
-                    await queue.setStatus(Queue.status.FREE);
-                } catch (error) {
-                    log(`Failed to setup match for queue ${queue.name} due to error`, error);
+                if (captains.length >= 2) {
+                    log("Enough captains are in, using picking mode");
+
+                    const capA = await Player.findById(captains[0]);
+                    const capB = await Player.findById(captains[1]);
+
+                    const players = await queue.divideCaptains(server, format, capA, capB);
+                    const match = new Match({
+                        status: Match.status.PICKING,
+                        game: app.config.game,
+                        server,
+                        players,
+                        selected: queue.players,
+                        map,
+                        format: queue.format
+                    });
+
+                    queue.players = [];
+    
+                    try {    
+                        await match.save();
+                        await queue.setStatus(Queue.status.FREE);
+                    } catch (error) {
+                        log(`Failed to setup match for queue ${queue.name} due to error`, error);
+                    }
+                } else {
+                    log("Not enough captains present, dividing teams randomly");
+                    const players = await queue.divideTeams(server, format); 
+                    const match = new Match({
+                        status: Match.status.SETUP,
+                        game: app.config.game,
+                        server,
+                        players,
+                        selected: queue.players,
+                        map,
+                        format: queue.format
+                    });
+    
+                    try {    
+                        await match.save();
+                        await match.setStatus(Match.status.PICKING);
+                        await queue.setStatus(Queue.status.FREE);
+                    } catch (error) {
+                        log(`Failed to setup match for queue ${queue.name} due to error`, error);
+                    }
                 }
             }
         } else if (queue.status === Queue.status.BLOCKED) {

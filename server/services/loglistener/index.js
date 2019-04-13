@@ -71,7 +71,7 @@ module.exports = app => {
 
                 log(`Log Event fired: (${server.name}) ${event.name}`);
                 line.data = data;
-        
+
                 if (server) {
                     if (server[`Log_${event.name}`])
                         server[`Log_${event.name}`](line);

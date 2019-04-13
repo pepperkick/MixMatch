@@ -11,10 +11,13 @@ module.exports = {
         players: {
             type: Object
         },
-        server: [{
+        selected: {
+            type: Object
+        },
+        server: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Server"
-        }],
+        },
         format: String,
         map: String,
         stats: Object

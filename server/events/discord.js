@@ -16,7 +16,6 @@ module.exports = app => {
 
     Discord.on("message", async message => {  
         if (message.content[0] !== app.config.discord.prefix) return;
-        if (message.guild.id !== app.config.discord.guild) return;
 
         log(`Message from ${message.author.id} (${message.author.username}) at ${message.channel.id}: ${message.content}`);
 
@@ -26,6 +25,7 @@ module.exports = app => {
         const args = {
             command: parameters[0],
             channel: message.channel.id,
+            guild: message.guild ? message.guild.id : null,
             parameters,
             message
         }
@@ -80,18 +80,41 @@ module.exports = app => {
         const voiceChannel = player.discordMember.voiceChannelID;
 
         if (voiceChannel) {
+            let flag = false;
+            
             for (const name in app.config.queues) {
                 if (voiceChannel === app.config.queues[name].channel) {
+                    if (!player.discordMember.roles.get(app.config.discord.roles.player)) {            
+                        await player.discordMember.send(`You do not have the proper role to join the queue, please contact admins for further info.`);
+                        await player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
+            
+                        return;
+                    }
+
                     const queue = await Queue.findByName(name);
 
-                    if (queue.status === Queue.status.BLOCKED) return;
+                    if (queue.status === Queue.status.BLOCKED) {            
+                        await player.discordMember.send(`The queue is currently not active.`);                 
+                        await player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
+
+                        return;
+                    };
 
                     await queue.addPlayer(player);
+
+                    flag = true;
+                }
+            }
+
+            if (!flag) {
+                if (player.status === Player.status.JOINED) {
+                    await player.queue.removePlayer(player);
                 }
             }
         } else {
-            if (player.status === Player.status.JOINED)
+            if (player.status === Player.status.JOINED) {
                 await player.queue.removePlayer(player);
+            }
         }
     });
 
