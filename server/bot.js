@@ -46,36 +46,13 @@ module.exports = async (app) => {
     registerCommand({ 
         command: 'pick'
     }, async (args) => {
-        if (args.parameters.length < 2) {
-            return args.message.reply("Usage: !pick <number>");
-        }
+        await handlePick(args);
+    });
 
-        const picked = parseInt(args.parameters[1]);
-        if (isNaN(picked) || picked < 0) {
-            return args.message.reply("Invalid number");
-        }
-
-        const player = await Player.findByDiscord(args.message.author.id);
-        if (!player) return;
-
-        const match = await Match.isPlayerSelected(player);
-        if (!match) return;
-
-        const picking = match.selected.length % 2;
-        const matchPlayer = await match.getPlayer(player);        
-
-        if (matchPlayer.captain) {
-            if (picked - 1 > match.selected.length) {
-                return args.message.reply("No one matched with that number.");
-            }
-
-            log(picked, picking, matchPlayer.team);
-            if ((picking === 0 && matchPlayer.team === "A") || (picking === 1 && matchPlayer.team === "B")) {
-                const pickedPlayer = await match.pickPlayer(picked - 1);
-                
-                return await args.message.reply(`Picked ${pickedPlayer.discordMember.user.tag} for your team`);
-            }
-        }
+    registerCommand({ 
+        command: 'p'
+    }, async (args) => {
+        await handlePick(args);
     });
 
     registerCommand({ command: 'reset_queues', role: [ app.config.discord.roles.admin ] }, 
@@ -489,6 +466,39 @@ module.exports = async (app) => {
                 log(`The command ${options.command} already exists for channel ${options.channel}`);
             } else {
                 throw error;
+            }
+        }
+    }
+
+    async function handlePick(args) {
+        if (args.parameters.length < 2) {
+            return args.message.reply("Usage: !pick <number>");
+        }
+
+        const picked = parseInt(args.parameters[1]);
+        if (isNaN(picked) || picked < 0) {
+            return args.message.reply("Invalid number");
+        }
+
+        const player = await Player.findByDiscord(args.message.author.id);
+        if (!player) return;
+
+        const match = await Match.isPlayerSelected(player);
+        if (!match) return;
+
+        const picking = match.selected.length % 2;
+        const matchPlayer = await match.getPlayer(player);        
+
+        if (matchPlayer.captain) {
+            if (picked - 1 > match.selected.length) {
+                return args.message.reply("No one matched with that number.");
+            }
+
+            log(picked, picking, matchPlayer.team);
+            if ((picking === 0 && matchPlayer.team === "A") || (picking === 1 && matchPlayer.team === "B")) {
+                const pickedPlayer = await match.pickPlayer(picked - 1);
+                
+                return await args.message.reply(`Picked ${pickedPlayer.discordMember.user.tag} for your team`);
             }
         }
     }
