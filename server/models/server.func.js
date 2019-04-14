@@ -219,6 +219,7 @@ module.exports = (schema, app) => {
             }
         
             await player.discordMember.addRole(this.role);
+            await this.commands.plugin.addPlayer(player.steam, players[i].team === "A" ? 0 : 1, player.getDiscordUser().username);
         }
     }
 
@@ -357,6 +358,7 @@ module.exports = (schema, app) => {
             else server.setStatus(Server.status.FREE);
         } else if (server.status === Server.status.FREE) {
             await server.discordRole.setName(`${server.name}: Free`);
+            await server.commands.plugin.removePlayers();
         }
     });
 }

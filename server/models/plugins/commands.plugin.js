@@ -16,7 +16,8 @@ module.exports = (schema, options) => {
                 kick: smKick.bind(this)
             },
             plugin: {
-                addPlayer: pluginAddPlayer.bind(this)
+                addPlayer: pluginAddPlayer.bind(this),
+                removePlayers: pluginRemovePlayers.bind(this)
             }
         }
     });
@@ -122,5 +123,10 @@ module.exports = (schema, options) => {
     async function pluginAddPlayer(steam, team, name) {
         if (this.hasPluginVar("mixmatch_version"))
             return this.sendCommand(`mx_add_player ${steam} ${team} "${name}"`);
+    }
+
+    async function pluginRemovePlayers() {
+        if (this.hasPluginVar("mixmatch_version"))
+            return this.sendCommand(`mx_remove_players`);
     }
 }

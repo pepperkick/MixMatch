@@ -45,6 +45,7 @@ public OnPluginStart() {
     g_hoHud = HudInit(127, 255, 127);
 
     RegConsoleCmd("mx_list_players", Command_ListPlayers);  
+    RegConsoleCmd("mx_remove_players", Command_RemovePlayers);  
     RegConsoleCmd("mx_add_player", Command_AddPlayer);   
     RegConsoleCmd("mx_get_player_client", Command_GetPlayerClient);  
     RegConsoleCmd("mx_send_player_chat", Command_SendPlayerChat);  
@@ -172,6 +173,14 @@ public Action Command_ListPlayers(int client, int args) {
 
         PrintToServer("%s %s %s", steam, name, team)
     }
+}
+
+public Action Command_RemovePlayers(int client, int args) {
+    PlayerSteam = new ArrayList(MAX_PLAYERS);
+    PlayerName = new StringMap();
+    PlayerTeam = new StringMap();
+
+    PrintToServer("ok");
 }
 
 public Action Command_SendPlayerChat(int c, int args) {

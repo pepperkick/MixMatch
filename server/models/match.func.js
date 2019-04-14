@@ -396,14 +396,14 @@ module.exports = (schema, app) => {
                 const player = await match.pickPlayer(Math.floor(Math.random() * match.selected.length));
 
                 if (picking === 0) {
-                    const player = await Player.findById(capA);
-                    await player.discordMember.send(`Picked ${player.discordMember.user.tag} randomly as you took too long to pick`);
+                    const capA = await Player.findById(capA);
+                    await capA.discordMember.send(`Picked ${player.discordMember.user.tag} randomly as you took too long to pick`);
                 } else {
-                    const player = await Player.findById(capB);
-                    await player.discordMember.send(`Picked ${player.discordMember.user.tag} randomly as you took too long to pick`);
+                    const capB = await Player.findById(capB);
+                    await capB.discordMember.send(`Picked ${player.discordMember.user.tag} randomly as you took too long to pick`);
                 }
             }
-        }, 15 * 1000);
+        }, 60 * 1000);
     }
 
     schema.methods.pickPlayer = async function (index) {
@@ -491,18 +491,20 @@ module.exports = (schema, app) => {
         const format = config.formats[match.format];
         const server = await Server.findById(match.server);
 
+        let interval;
+
         if (match.status === Match.status.PICKING) {
             await match.initPickPlayer();
         } else if (match.status === Match.status.SETUP) {
-            await server.commands.changeLevel(match.map);
-            await server.createDiscordChannels();
-            await server.moveDiscordPlayers();
             await server.discordRole.setName(`${server.name}: Setting Up`);
             await server.setStatus(Server.status.RESERVED);
+            await server.createDiscordChannels();
+            await server.moveDiscordPlayers();
+            await server.commands.changeLevel(match.map);
             await server.save();
         } else if (match.status === Match.status.WAITING) {
             await server.discordRole.setName(`${server.name}: Waiting (0/${format.size * 2})`);
-            const interval = setInterval(function () {
+            interval = setInterval(function () {
                 checkMatchStatus(match, interval);
             }, 30000);
             await server.sendDiscordMessage({ 
@@ -536,12 +538,12 @@ module.exports = (schema, app) => {
             });
         } else if (match.status === Match.status.KNIFE) {
             await server.discordRole.setName(`${server.name}: Knife Round`);
-            clearInterval(interval);
+            if (interval) clearInterval(interval);
         }  else if (match.status === Match.status.VOTING) {
             await server.discordRole.setName(`${server.name}: Voting`);
         } else if (match.status === Match.status.LIVE) {
             await server.discordRole.setName(`${server.name}: Live`);
-            clearInterval(interval);
+            if (interval) clearInterval(interval);
         } else if (match.status === Match.status.ENDED) {
             await server.discordRole.setName(`${server.name}: Ended`);      
             
@@ -582,9 +584,11 @@ module.exports = (schema, app) => {
         }
     });
 
-    async function checkMatchStatus(match, interval) {
-        const Server = match.model("Server");
+    async function checkMatchStatus(instance, interval) {
+        const Server = instance.model("Server");
+        const Match = instance.model("Match");
 
+        const match = await Match.findById(instance);
         const server = await Server.findById(match.server);
         const config = match.getConfig();
         const format = config.formats[match.format];
@@ -595,15 +599,17 @@ module.exports = (schema, app) => {
 
         if (match.status === statuses.WAITING)
             await server.discordRole.setName(`${server.name}: Waiting (${num < 0 ? 0 : num}/${format.size * 2})`);
+        else if (match.status === statuses.LIVE)
+            if (interval) clearInterval(interval);
 
         if (((new Date) - match.matchStartTime) > cooldown) {
-            if (match.status === statuses.WAITING && num !== format.size * 2) {
+            if (match.status === statuses.WAITING && num < format.size * 2) {
                 log(`Match ${match.id} has gone past cooldown and only (${num} / ${format.size * 2}) players joined. So the match will be cancelled.`);
 
                 await match.setStatus(statuses.CANCELED);
             }
 
-            clearInterval(interval);
+            if (interval) clearInterval(interval);
         }
     }
 };

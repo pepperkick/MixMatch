@@ -155,8 +155,6 @@ module.exports = (schema, app) => {
             }
             
             await this.removePlayer(player);
-            await server.commands.plugin.addPlayer(player.steam, i%2, player.getDiscordUser().username);
-            await player.discordMember.addRole(server.role);
         }
         
         return players;
@@ -169,15 +167,15 @@ module.exports = (schema, app) => {
             team: "A",
             captain: true
         }
-        capA.discordMember.addRole(app.config.teams.A.role);
-        capA.discordMember.addRole(server.role);
+        await capA.discordMember.addRole(app.config.teams.A.role);
+        await capA.discordMember.addRole(server.role);
 
         players[capB.id.toString()] = {
             team: "B",
             captain: true
         }
-        capB.discordMember.addRole(app.config.teams.B.role);
-        capB.discordMember.addRole(server.role);
+        await capB.discordMember.addRole(app.config.teams.B.role);
+        await capB.discordMember.addRole(server.role);
 
         return players;
     }
@@ -214,9 +212,9 @@ module.exports = (schema, app) => {
                 log(`Failed to set role name for Queue ${queue.name}`, error);
             }
 
-            if (queue.players.length >= format.size * 2) {        
+            if (queue.players.length == format.size * 2) {        
                 log(`Enough players have joined ${queue.name}, finding a free server.`);
-                
+
                 const server = await Server.findFreeServer();
                 const map = format.maps[Math.floor(Math.random() * format.maps.length)];
                 const captains = [];
@@ -255,6 +253,7 @@ module.exports = (schema, app) => {
     
                     try {    
                         await match.save();
+                        await match.setStatus(Match.status.PICKING);
                         await queue.setStatus(Queue.status.FREE);
                     } catch (error) {
                         log(`Failed to setup match for queue ${queue.name} due to error`, error);
@@ -274,7 +273,6 @@ module.exports = (schema, app) => {
     
                     try {    
                         await match.save();
-                        await match.setStatus(Match.status.PICKING);
                         await queue.setStatus(Queue.status.FREE);
                     } catch (error) {
                         log(`Failed to setup match for queue ${queue.name} due to error`, error);
