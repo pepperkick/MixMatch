@@ -476,7 +476,7 @@ module.exports = async (app) => {
         }
 
         const picked = parseInt(args.parameters[1]);
-        if (isNaN(picked) || picked < 0) {
+        if (isNaN(picked) || picked <= 0) {
             return args.message.reply("Invalid number");
         }
 
@@ -490,7 +490,7 @@ module.exports = async (app) => {
         const matchPlayer = await match.getPlayer(player);        
 
         if (matchPlayer.captain) {
-            if (picked - 1 > match.selected.length) {
+            if (picked - 1 >= match.selected.length) {
                 return args.message.reply("No one matched with that number.");
             }
 

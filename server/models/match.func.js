@@ -7,6 +7,7 @@ module.exports = (schema, app) => {
     const statuses = Object.freeze({
         UNKNOWN: 'UNKNOWN',
         PICKING: 'PICKING',
+        MAPVOTING: 'MAPVOTING',
         SETUP: 'SETUP',
         WAITING: 'WAITING',
         KNIFE: 'KNIFE',
@@ -495,6 +496,8 @@ module.exports = (schema, app) => {
 
         if (match.status === Match.status.PICKING) {
             await match.initPickPlayer();
+        } else if (match.status === Match.status.MAPVOTING) {
+            // TODO: Implement map voting
         } else if (match.status === Match.status.SETUP) {
             await server.discordRole.setName(`${server.name}: Setting Up`);
             await server.setStatus(Server.status.RESERVED);
@@ -507,35 +510,42 @@ module.exports = (schema, app) => {
             interval = setInterval(function () {
                 checkMatchStatus(match, interval);
             }, 30000);
-            await server.sendDiscordMessage({ 
-                text: "@everyone",
-                embed: {
-                    color: 0x00BCD4,
-                    title: `Server ${server.name}`,
-                    fields: [
-                        {
-                            name: 'Status',
-                            value: 'Waiting for players to join'
-                        },
-                        {
-                            name: "Connect",
-                            value: `steam://connect/${server.ip}:${server.port}`,
-                            inline: false
-                        },
-                        {
-                            name: 'Format',
-                            value: match.format,
-                            inline: true
-                        },  
-                        {
-                            name: 'Map',
-                            value: match.map,
-                            inline: false
-                        } 
-                    ],
-                    timestamp: new Date()
-                }
-            });
+
+            if (!match.prefs.announced)
+                await server.sendDiscordMessage({ 
+                    text: "@everyone",
+                    embed: {
+                        color: 0x00BCD4,
+                        title: `Server ${server.name}`,
+                        fields: [
+                            {
+                                name: 'Status',
+                                value: 'Waiting for players to join'
+                            },
+                            {
+                                name: "Connect",
+                                value: `steam://connect/${server.ip}:${server.port}`,
+                                inline: false
+                            },
+                            {
+                                name: 'Format',
+                                value: match.format,
+                                inline: true
+                            },  
+                            {
+                                name: 'Map',
+                                value: match.map,
+                                inline: false
+                            } 
+                        ],
+                        timestamp: new Date()
+                    }
+                });
+
+            match.prefs.announced = true;
+            match.markModified("prefs");
+
+            await match.save();
         } else if (match.status === Match.status.KNIFE) {
             await server.discordRole.setName(`${server.name}: Knife Round`);
             if (interval) clearInterval(interval);
@@ -593,7 +603,7 @@ module.exports = (schema, app) => {
         const config = match.getConfig();
         const format = config.formats[match.format];
         const num = await server.getNumberOfPlayers();
-        const cooldown = 5 * 60 * 1000;
+        const cooldown = 15 * 60 * 1000;
 
         log(`Checking match cooldown ${(new Date) - match.matchStartTime} / ${cooldown}`);
 

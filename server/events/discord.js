@@ -16,7 +16,7 @@ module.exports = app => {
 
     Discord.on("message", async message => {  
         if (message.content[0] !== app.config.discord.prefix) return;
-
+    
         log(`Message from ${message.author.id} (${message.author.username}) at ${message.channel.id}: ${message.content}`);
 
         const parameters = message.content.split(' ');

@@ -87,6 +87,11 @@ module.exports = (app) => {
   
     router.get(['/', '/return'], (req, res, next) => {
         passport.authenticate('discord', function(err, user, info) {
+            if (err) {
+                res.send('Something went wrong, please check discord');
+                log(err);
+            }
+
             if (user) {
                 res.send('Success, you can close this window now!');
             }

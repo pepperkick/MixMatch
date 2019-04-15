@@ -121,7 +121,12 @@ module.exports = (schema, app) => {
             throw new Exception("QUEUE_NOT_FREE", `Queue's queue currently has players, the Queue format cannot change while players still in queue. `);
 
         this.format = format;
+        const formatConfig = app.config.formats[format];
+        const voice = app.discord.bot.channels.get(this.channel);
+        const category = app.discord.bot.channels.get(this.channel).parent;
 
+        await category.setName(`Queue ${this.name} (${formatConfig.name})`);
+        await voice.setUserLimit(formatConfig.size * 2, `Queue ${this.name} format changed to ${format}`);
         await this.save();
     }
 
