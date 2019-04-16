@@ -112,7 +112,6 @@ module.exports = app => {
                 }
             }
         } else {
-            log(player.status);
             if (player.status === Player.status.JOINED) {
                 await player.queue.removePlayer(player);
             }

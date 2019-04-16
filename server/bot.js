@@ -15,7 +15,10 @@ module.exports = async (app) => {
 
     registerCommand({ command: 'ping' }, 
     (args) => {
-        args.message.reply("Pong!");
+        args.message.reply("", { embed: {
+            title: "Pong",
+            color: 0x36393f
+        }});
     });
 
     registerCommand({ command: 'register' }, 

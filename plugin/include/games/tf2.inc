@@ -38,6 +38,26 @@ public void Game_OnPlayerConnectPost(int client) {
 }
 
 public Action GameCommand_JoinTeam(int client, const char[] command, int argc) {
+    char team[9], steam[32], playerTeam[4];
+
+    GetCmdArg(1, team, sizeof(team));
+    GetClientAuthId(client, AuthId_SteamID64, steam, sizeof(steam));
+    PlayerTeam.GetString(steam, playerTeam, sizeof(playerTeam));
+
+    Log("Client %d is joining team %s, client assigned team is %s", client, team, playerTeam);
+
+    if (StrEqual(team, "auto", false)) {
+        ChangeClientTeam(client, StringToInt(playerTeam));
+
+        return Plugin_Handled;
+    } else if (StrEqual(team, "blue", false) && StrEqual(playerTeam, "3", false)) {
+        return Plugin_Continue;
+    } else if (StrEqual(team, "red", false) && StrEqual(playerTeam, "2", false)) {
+        return Plugin_Continue;
+    } else if (StrEqual(team, "spectate", false)) {
+        return Plugin_Continue;
+    }
+
     return Plugin_Handled;
 }
 

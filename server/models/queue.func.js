@@ -1,6 +1,7 @@
 const Exception = require("../objects/exception");
 
 const log = require('debug')('app:models:queue');
+const intervals = {};
 
 module.exports = (schema, app) => {
     const statuses = Object.freeze({
@@ -197,6 +198,10 @@ module.exports = (schema, app) => {
 
         const config = app.config;
         const format = config.formats[queue.format];
+
+        if (!intervals[queue.id.toString()]) {
+            intervals[queue.id.toString()] = setInterval(() => checkQueue(queue), 2500);
+        }
         
         if (queue.status === Queue.status.UNKNOWN) {
             try {
@@ -211,20 +216,10 @@ module.exports = (schema, app) => {
                 log(error);
             }
         } else if (queue.status === Queue.status.FREE) {
-            log(`Number of players in ${queue.name}: ${queue.players.length} / ${format.size * 2}`);
-
-            try {
-                if (queue.players.length === 0) {
-                    await queue.discordRole.setName(`${queue.name}: Empty`);
-                } else {
-                    await queue.discordRole.setName(`${queue.name}: Queuing (${queue.players.length}/${format.size * 2})`);
-                }
-            } catch (error) {
-                log(`Failed to set role name for Queue ${queue.name}`, error);
-            }
+            log(`Number of players in queue ${queue.name}: ${queue.players.length} / ${format.size * 2}`);
 
             if (queue.players.length == format.size * 2) {        
-                log(`Enough players have joined ${queue.name}, finding a free server.`);
+                log(`Enough players have joined queue ${queue.name}, finding a free server.`);
 
                 const server = await Server.findFreeServer();
                 const map = format.maps[Math.floor(Math.random() * format.maps.length)];
@@ -291,13 +286,32 @@ module.exports = (schema, app) => {
                 }
             }
         } else if (queue.status === Queue.status.BLOCKED) {
-            try {
-                await queue.discordRole.setName(`${queue.name}: Blocked`);
-                
+            try {                
                 setTimeout(() => queue.setStatus(Queue.status.UNKNOWN), 30000);
             } catch (error) {
                 log(`Failed to set role name for Queue ${queue.name}`, error);
             }
         }
     });
+
+    async function checkQueue(instance) {
+        const Queue = instance.model("Queue");
+        const queue = await Queue.findById(instance.id);
+        const format = app.config.formats[queue.format];
+
+        switch(queue.status) {
+            case statuses.UNKNOWN:
+                queue.discordRole.setName(`${queue.name}: Unknown`);
+                break;
+            case statuses.FREE:
+                if (queue.players.length === 0)
+                    queue.discordRole.setName(`${queue.name}: Empty`);
+                else
+                    queue.discordRole.setName(`${queue.name}: Queuing (${queue.players.length}/${format.size * 2})`);
+                break;
+            case statuses.BLOCKED:
+                queue.discordRole.setName(`${queue.name}: Blocked`);
+                break;
+        }
+    }
 }

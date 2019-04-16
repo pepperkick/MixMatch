@@ -357,9 +357,9 @@ module.exports = (schema, app) => {
             }
             else server.setStatus(Server.status.FREE);
         } else if (server.status === Server.status.FREE) {
-            await server.discordRole.setName(`${server.name}: Free`);
             await server.commands.plugin.removePlayers();
             await server.deleteDiscordChannels();  
+            await server.discordRole.setName(`${server.name}: Free`);
         }
     });
 }
