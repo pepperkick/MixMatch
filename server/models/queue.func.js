@@ -59,14 +59,18 @@ module.exports = (schema, app) => {
         if (!this.isFree())
             throw new Exception("QUEUE_NOT_FREE", `Queue status is currently ${this.status} which needs to be ${statuses.FREE} for player to join.`);
 
-        this.players.push(player.id);
-
-        log(`${this.name}: Added Player ${player.id} (${player.discord})`);
-
-        await player.joinQueue(this);
-        await this.save();
-
-        return true;
+        try {
+            this.players.push(player.id);
+    
+            await player.joinQueue(this);
+            await this.save();
+    
+            log(`${this.name}: Added Player ${player.id} (${player.discord})`);
+    
+            return true;
+        } catch (error) {
+            log(`Failed to add player ${player.id} to queue ${this.name}`, error);
+        }
     }
 
     schema.methods.removePlayer = async function (player, force = false) {
@@ -207,6 +211,8 @@ module.exports = (schema, app) => {
                 log(error);
             }
         } else if (queue.status === Queue.status.FREE) {
+            log(`Number of players in ${queue.name}: ${queue.players.length} / ${format.size * 2}`);
+
             try {
                 if (queue.players.length === 0) {
                     await queue.discordRole.setName(`${queue.name}: Empty`);

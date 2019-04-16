@@ -2,6 +2,7 @@ const sleep = require('async-sleep');
 const log = require('debug')('app:models:match');
 
 let cache = {};
+let interval = {};
 
 module.exports = (schema, app) => {
     const statuses = Object.freeze({
@@ -492,8 +493,6 @@ module.exports = (schema, app) => {
         const format = config.formats[match.format];
         const server = await Server.findById(match.server);
 
-        let interval;
-
         if (match.status === Match.status.PICKING) {
             await match.initPickPlayer();
         } else if (match.status === Match.status.MAPVOTING) {
@@ -507,9 +506,12 @@ module.exports = (schema, app) => {
             await server.save();
         } else if (match.status === Match.status.WAITING) {
             await server.discordRole.setName(`${server.name}: Waiting (0/${format.size * 2})`);
-            interval = setInterval(function () {
-                checkMatchStatus(match, interval);
-            }, 30000);
+            
+            if (!interval[match.id.toString()]) {
+                interval[match.id.toString()] = setInterval(function () {
+                    checkMatchStatus(match, interval);
+                }, 30000);
+            }
 
             if (!match.prefs.announced)
                 await server.sendDiscordMessage({ 
@@ -548,16 +550,22 @@ module.exports = (schema, app) => {
             await match.save();
         } else if (match.status === Match.status.KNIFE) {
             await server.discordRole.setName(`${server.name}: Knife Round`);
-            if (interval) clearInterval(interval);
+            if (interval[match.id.toString()]) {
+                clearInterval(interval[match.id.toString()]);
+                interval[match.id.toString()] = null;
+            }
         }  else if (match.status === Match.status.VOTING) {
             await server.discordRole.setName(`${server.name}: Voting`);
         } else if (match.status === Match.status.LIVE) {
             await server.discordRole.setName(`${server.name}: Live`);
-            if (interval) clearInterval(interval);
+            if (interval[match.id.toString()]) {
+                clearInterval(interval[match.id.toString()]);
+                interval[match.id.toString()] = null;
+            }
         } else if (match.status === Match.status.ENDED) {
             await server.discordRole.setName(`${server.name}: Ended`);      
             
-            await sleep(30 * 1000);
+            await sleep(5 * 1000);
 
             for (let i in match.players) {
                 const player = await Player.findById(i);
