@@ -135,7 +135,7 @@ module.exports = (schema, app) => {
 
             log(`Number of players: ${num}`);
 
-            await server.discordRole.setName(`${server.name}: Waiting (${num}/${format.size * 2})`);
+            server.discordRole.setName(`${server.name}: Waiting (${num}/${format.size * 2})`);
 
             if (app.config.game === "csgo") {
                 if (num === format.size * 2) {
@@ -210,8 +210,6 @@ module.exports = (schema, app) => {
         const config = this.getConfig();
         const format = config.formats[this.format];
         const num = await server.getNumberOfPlayers();
-
-        log(event);
 
         if (this.status === statuses.WAITING) {
             if (num > 1 && num < format.size * 2) {
@@ -395,6 +393,16 @@ module.exports = (schema, app) => {
         fields.push({
             name: "Players",
             value: players
+        });
+        fields.push({
+            name: app.config.teams.A.name,
+            value: teamA,
+            inline: true
+        });
+        fields.push({
+            name: app.config.teams.B.name,
+            value: teamB,
+            inline: true
         });
 
         log(capA, capB, picking);
@@ -629,7 +637,7 @@ module.exports = (schema, app) => {
         const config = match.getConfig();
         const format = config.formats[match.format];
         const num = await server.getNumberOfPlayers();
-        const cooldown = 15 * 60 * 1000;
+        const cooldown = (app.config.prefs.matchCancelCooldown || 15) * 60 * 1000;
 
         log(`Checking match cooldown ${(new Date) - match.matchStartTime} / ${cooldown}`);
 

@@ -12,7 +12,7 @@
 #define LOG_BUFFERSIZE 768
 
 #define ALLOWBOT
-#define GAME_TF2
+#define GAME_CSGO
 
 public Plugin:myinfo = {
     name = "MixMatch",

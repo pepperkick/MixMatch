@@ -313,7 +313,7 @@ module.exports = (schema, app) => {
         else return await this.commands.kick(client, "Something is not right, please try again later");
 
         if (player) {
-            if (await match.isPlayerPlaying(steamId));
+            if (await match.isPlayerPlaying(player));
             else {
                 return await this.commands.kick(client, "You cannot join this match");
             }
@@ -353,7 +353,6 @@ module.exports = (schema, app) => {
 
             if (match) { 
                 await server.setStatus(Server.status.RESERVED);
-                await match.setStatus(match.status);
             }
             else server.setStatus(Server.status.FREE);
         } else if (server.status === Server.status.FREE) {

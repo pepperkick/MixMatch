@@ -84,6 +84,7 @@ module.exports = async (app) => {
 
     checkQueues();
     checkServers();
+    checkMatches();
 
     Player.on("new", onNewPlayer);
     Player.on("player_left_queue", onPlayerLeftQueue);
@@ -125,6 +126,34 @@ module.exports = async (app) => {
         }
     }
 
+    async function checkMatches() {
+        log("Checking for ongoing matches");
+
+        const matches_picking = await Match.find({ status: Match.status.PICKING });
+
+        for (let match of matches_picking) {
+            await match.setStatus(Match.status.PICKING);
+        }
+
+        const matches_setup = await Match.find({ status: Match.status.SETUP });
+
+        for (let match of matches_setup) {
+            await match.setStatus(Match.status.SETUP);
+        }
+
+        const matches_waiting = await Match.find({ status: Match.status.WAITING });
+
+        for (let match of matches_waiting) {
+            await match.setStatus(Match.status.WAITING);
+        }
+
+        const matches_live = await Match.find({ status: Match.status.LIVE });
+
+        for (let match of matches_live) {
+            await match.setStatus(Match.status.LIVE);
+        }
+    }
+
     async function handleServerStatus () {
         const servers = await Server.find({ status: { $in: [ Server.status.FREE, Server.status.RESERVED ] } });
 
@@ -150,15 +179,17 @@ module.exports = async (app) => {
                 const player = await Player.findBySteam(steamId);
 
                 if (server.status === Server.status.FREE) {
-                    return server.commands.kick(client, "Server is not accepting connections anymore");
+                    server.commands.kick(client, "Server is not accepting connections anymore");
+
+                    continue;
                 }
     
                 if (player) {                    
                     if (match) {
                         if (match.isPlayerPlaying(steamId));
-                        else return server.commands.kick(client, "You are not assigned to this match");
-                    } else return server.commands.kick(client, "Something went wrong, please try again later");
-                } else return server.commands.kick(client, "Unable to verify your registration");
+                        else server.commands.kick(client, "You are not assigned to this match");
+                    } else server.commands.kick(client, "Something went wrong, please try again later");
+                } else server.commands.kick(client, "Unable to verify your registration");
             }
         }
     }
@@ -174,11 +205,12 @@ module.exports = async (app) => {
         log(`${server.name} RCON Connected Event`);
         
         try {
-            if (server.game === "tf2") {
-                await server.commands.console.addLogListener(`${app.config.host}:${app.config.udpListener}`);
-            } else if (server.game === "csgo") {
-                await server.commands.console.addHttpLogListener(`http://${app.config.host}:${app.config.port}/log_listener`);
-            }
+            await server.commands.console.addLogListener(`${app.config.host}:${app.config.udpListener}`);
+            // if (server.game === "tf2") {
+            //     await server.commands.console.addLogListener(`${app.config.host}:${app.config.udpListener}`);
+            // } else if (server.game === "csgo") {
+            //     await server.commands.console.addHttpLogListener(`http://${app.config.host}:${app.config.port}/log_listener`);
+            // }
 
             log(`Log listener added to server ${server.name}`);
 
