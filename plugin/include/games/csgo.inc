@@ -29,11 +29,9 @@ public void Game_OnPlayerConnectPost(int client) {
         return;
     }
 
+    GetClientAuthId(client, AuthId_SteamID64, steam, sizeof(steam));
     PlayerName.GetString(steam, name, sizeof(name));
     SetClientName(client, name);
-
-    StringMap parameters = new StringMap();
-    parameters.SetString("id", steam);
 }
 
 public void Game_Reset() {

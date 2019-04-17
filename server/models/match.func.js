@@ -369,23 +369,35 @@ module.exports = (schema, app) => {
         for (let i = 0; i < this.selected.length; i++) {
             const player = await Player.findById(this.selected[i]);
 
-            players += `**${i+1}**: ${player.discordMember.user.tag}\n`
+            players += `**${i+1}**: ${player.discordMember.user.tag}`
+            
+            if (player.prefs && player.prefs.class) {
+                players += ` (${player.prefs.class})`;
+            }
+
+            players += "\n";
         }
 
         for (i in this.players) {
             const player = await Player.findById(i);
 
             if (player) {
-                if (player.team === "A") {
-                    if (player.captain) 
-                        teamA += `**${player.discordMember.user.tag}**\n`;
-                    else
-                        teamA += `${player.discordMember.user.tag}\n`;
-                } else if (player.team === "B") {
-                    if (player.captain) 
-                        teamB += `**${player.discordMember.user.tag}**\n`;
-                    else
-                        teamB += `${player.discordMember.user.tag}\n`;
+                let msg = "";
+
+                if (this.players[i].captain) 
+                    msg += `**${player.discordMember.user.tag}**`;
+                else
+                    msg += `${player.discordMember.user.tag}`;
+
+                if (player.prefs && player.prefs.class)
+                    msg += ` (${player.prefs.class})`;
+        
+                msg += "\n";
+
+                if (this.players[i].team === "A") {
+                    teamA += msg;
+                } else if (this.players[i].team === "B") {
+                    teamB += msg;
                 }
             }
         }
@@ -521,13 +533,33 @@ module.exports = (schema, app) => {
         const server = await Server.findById(match.server);
 
         if (match.status === Match.status.PICKING) {
+            server.discordRole.setName(`${server.name}: Picking`);
+
+            if (!match.prefs.createdChannels) {
+                await server.createDiscordChannels();     
+                
+                match.prefs.createdChannels = true;
+                match.markModified("prefs");
+
+                await match.save();
+            }
+
             await match.initPickPlayer();
         } else if (match.status === Match.status.MAPVOTING) {
             // TODO: Implement map voting
         } else if (match.status === Match.status.SETUP) {
             server.discordRole.setName(`${server.name}: Setting Up`);
             await server.setStatus(Server.status.RESERVED);
-            await server.createDiscordChannels();
+
+            if (!match.prefs.createdChannels) {
+                await server.createDiscordChannels();     
+                
+                match.prefs.createdChannels = true;
+                match.markModified("prefs");
+
+                await match.save();
+            }
+
             await server.moveDiscordPlayers();
             await server.commands.changeLevel(match.map);
             await server.save();
@@ -540,7 +572,7 @@ module.exports = (schema, app) => {
                 }, 30000);
             }
 
-            if (!match.prefs.announced)
+            if (!match.prefs.announced) {
                 await server.sendDiscordMessage({ 
                     text: "@everyone",
                     embed: {
@@ -571,10 +603,11 @@ module.exports = (schema, app) => {
                     }
                 });
 
-            match.prefs.announced = true;
-            match.markModified("prefs");
+                match.prefs.announced = true;
+                match.markModified("prefs");
 
-            await match.save();
+                await match.save();
+            }
         } else if (match.status === Match.status.KNIFE) {
             server.discordRole.setName(`${server.name}: Knife Round`);
             if (interval[match.id.toString()]) {
@@ -643,8 +676,14 @@ module.exports = (schema, app) => {
 
         if (match.status === statuses.WAITING)
             server.discordRole.setName(`${server.name}: Waiting (${num < 0 ? 0 : num}/${format.size * 2})`);
-        else if (match.status === statuses.LIVE)
-            if (interval) clearInterval(interval);
+        else if (match.status === statuses.LIVE) {
+            if (interval[match.id.toString()]) {
+                clearInterval(interval[match.id.toString()]);
+                interval[match.id.toString()] = null;
+            }
+        
+            log("Removed match cooldown check since match is live");
+        }
 
         if (((new Date) - match.matchStartTime) > cooldown) {
             if (match.status === statuses.WAITING && num < format.size * 2) {

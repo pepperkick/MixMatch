@@ -14,6 +14,10 @@ module.exports = (schema, app) => {
             type: String,
             enum: Object.values(statuses),
             default: statuses.FREE
+        },
+        prefs: {
+            type: Object,
+            default: {}
         }
     });
     
@@ -87,6 +91,13 @@ module.exports = (schema, app) => {
         await this.save();
 
         this.model(this.constructor.modelName).emit('player_left_queue', this);
+    }
+
+    schema.methods.setClass = async function (playerClass) {
+        this.prefs.class = playerClass;
+        this.markModified("prefs");
+
+        await this.save();
     }
 
     schema.virtual("match.team").get(async function () {        

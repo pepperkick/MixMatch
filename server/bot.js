@@ -58,6 +58,12 @@ module.exports = async (app) => {
         await handlePick(args);
     });
 
+    registerCommand({ 
+        command: 'class'
+    }, async (args) => {
+        await handleClassPick(args);
+    });
+
     registerCommand({ command: 'reset_queues', role: [ app.config.discord.roles.admin ] }, 
     async (args) => {
         const queues_db = await Queue.find();
@@ -293,6 +299,8 @@ module.exports = async (app) => {
 
     async function changeQueueFormat(args) {
         queue = await Queue.findByName(args.parameters[1]);
+
+        if (!queue) return args.message.reply(`No queue found with that name`);
         
         const queue_config = app.config.queues[queue.name];
         const format = args.parameters[2];
@@ -536,5 +544,34 @@ module.exports = async (app) => {
                 return await args.message.reply(`Picked ${pickedPlayer.discordMember.user.tag} for your team`);
             }
         }
+    }
+    
+    async function handleClassPick(args) {
+        const types = app.config.classes;
+        const type = args.parameters.length > 1 ? args.parameters[1].toLowerCase() : "";
+
+        if (type !== "") {
+            for (let i = 0; i < types.length; i++) {
+                if (types[i].toLowerCase() === type) {
+                    const player = await Player.findByDiscord(args.message.author.id);
+                    if (!player) return;
+
+                    await player.setClass(types[i]);
+
+                    return args.message.reply(`Your preferred class is now **${player.prefs.class}**.`);
+                }
+            }
+        }
+
+        let msg = "\n";
+        msg += "Currently supported classes are\n";
+
+        for (let i = 0; i < types.length; i++) {
+            msg += `${i+1}: ${types[i]}\n`;
+        }
+
+        msg += `\nYou can use the command like \`!class ${types[0].toLowerCase()}\``;
+
+        return args.message.reply(msg);
     }
 };
