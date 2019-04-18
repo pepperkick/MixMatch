@@ -573,8 +573,14 @@ module.exports = (schema, app) => {
             }
 
             if (!match.prefs.announced) {
+                await server.sendDiscordMessage({                    
+                    text: `@everyone Server is ready, join at\n
+                    URL: steam://connect/${server.ip}:${server.port}\n
+                    Console: connect ${server.ip}:${server.port}\n
+                    IP: ${server.ip}:${server.port}`,
+                });
+
                 await server.sendDiscordMessage({ 
-                    text: "@everyone",
                     embed: {
                         color: 0x00BCD4,
                         title: `Server ${server.name}`,
@@ -630,10 +636,10 @@ module.exports = (schema, app) => {
             for (let i in match.players) {
                 const player = await Player.findById(i);
 
-                await player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
-                await player.discordMember.removeRole(server.role);
-                await player.discordMember.removeRole(app.config.teams.A.role);
-                await player.discordMember.removeRole(app.config.teams.B.role);
+                player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
+                player.discordMember.removeRole(server.role);
+                player.discordMember.removeRole(app.config.teams.A.role);
+                player.discordMember.removeRole(app.config.teams.B.role);
             }
 
             await sleep(30 * 1000);
@@ -642,20 +648,29 @@ module.exports = (schema, app) => {
             // await match.postEndResult();
             await server.commands.changeLevel(match.map);
         } else if (match.status === Match.status.ERROR) {     
-            await server.setStatus(Server.status.FREE);  
-        }  else if (match.status === Match.status.CANCELED) {     
-            await server.setStatus(Server.status.FREE);  
-
             for (let i in match.players) {
                 const player = await Player.findById(i);
 
-                await player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
-                await player.discordMember.removeRole(server.role);
-                await player.discordMember.removeRole(app.config.teams.A.role);
-                await player.discordMember.removeRole(app.config.teams.B.role);
+                player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
+                player.discordMember.removeRole(server.role);
+                player.discordMember.removeRole(app.config.teams.A.role);
+                player.discordMember.removeRole(app.config.teams.B.role);
             }
 
-            await server.deleteDiscordChannels();  
+            await sleep(30 * 1000);  
+            await server.setStatus(Server.status.FREE);  
+        }  else if (match.status === Match.status.CANCELED) {     
+            for (let i in match.players) {
+                const player = await Player.findById(i);
+
+                player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
+                player.discordMember.removeRole(server.role);
+                player.discordMember.removeRole(app.config.teams.A.role);
+                player.discordMember.removeRole(app.config.teams.B.role);
+            }
+
+            await sleep(30 * 1000);
+            await server.setStatus(Server.status.FREE);  
         } else {   
             await match.setStatus(Match.status.ERROR);  
         }
@@ -692,7 +707,10 @@ module.exports = (schema, app) => {
                 await match.setStatus(statuses.CANCELED);
             }
 
-            if (interval) clearInterval(interval);
+            if (interval[match.id.toString()]) {
+                clearInterval(interval[match.id.toString()]);
+                interval[match.id.toString()] = null;
+            }
         }
     }
 };

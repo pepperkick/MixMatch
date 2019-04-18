@@ -5,13 +5,14 @@ module.exports = app => {
     const Player = app.connection.model("Player");
     const Command = app.object.command;
     const Discord = app.discord;
+    const QueueThrottle = [];
 
     if (Discord.bot.status == 0) {
-        CheckMembers();
+        BotReady();
     }
 
     Discord.on("ready", () => {
-        CheckMembers();
+        BotReady();
     });
 
     Discord.on("message", async message => {  
@@ -44,7 +45,7 @@ module.exports = app => {
         }
     });
 
-    Discord.on("newMember", async member => {
+    Discord.on("memberJoined", async member => {
         try {
             const channel = await member.user.createDM();  
             const player = await Player.findByDiscord(member.user);
@@ -68,7 +69,54 @@ module.exports = app => {
         }
     });
 
+    Discord.on("memberLeft", async member => {
+        if (app.config.discord.channels.log) {
+            const message = {
+                text: `${member.user.tag} left the server.`
+            }
+
+            await Discord.sendToChannel(app.config.discord.channels.log, message);
+        }
+    });
+
     Discord.on("voiceStateUpdate", async (oldMember, newMember) => {
+        QueueThrottle.push(newMember);
+    });
+
+    Discord.on("error", async (error) => {
+        if (error.code === "ECONNRESET") {
+            log("Discord socket disconnected");
+
+            await Discord.login();
+        }
+    });
+
+    async function BotReady() {
+        setInterval(CheckQueueThrottle, 2500);
+        CheckMembers();
+    }
+
+    async function CheckMembers() {
+        log("Checking Members...")
+        const guild = await Discord.getGuild(app.config.discord.guild);
+        const members = guild.members;
+
+        for await ([ id, member ] of members) {
+            const player = await Player.findByDiscord(member.user);
+
+            if (player) {
+                await Discord.assignRole(app.config.discord.guild, player.discord, app.config.discord.roles.player);                
+            }
+        }        
+    }
+
+    async function CheckQueueThrottle() {
+        const newMember = QueueThrottle.pop();
+
+        if (!newMember) {
+            return;
+        }
+
         let player = await Player.findByDiscord(newMember.id);
         
         if (!player) {
@@ -116,27 +164,5 @@ module.exports = app => {
                 await player.queue.removePlayer(player);
             }
         }
-    });
-
-    Discord.on("error", async (error) => {
-        if (error.code === "ECONNRESET") {
-            log("Discord socket disconnected");
-
-            await Discord.login();
-        }
-    });
-
-    async function CheckMembers() {
-        log("Checking Members...")
-        const guild = await Discord.getGuild(app.config.discord.guild);
-        const members = guild.members;
-
-        for await ([ id, member ] of members) {
-            const player = await Player.findByDiscord(member.user);
-
-            if (player) {
-                await Discord.assignRole(app.config.discord.guild, player.discord, app.config.discord.roles.player);                
-            }
-        }        
     }
 }

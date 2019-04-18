@@ -32,7 +32,16 @@ module.exports = async (app) => {
 
         log(`New member joined the guild ${member.user.id}`)
 
-        em.emit("newMember", member);
+        em.emit("memberJoined", member);
+    });
+
+    // Emitted when a member leaves or kicked
+    bot.on('guildMemberRemove', async (member) => {
+        if (member.guild.id !== app.config.discord.guild) return;   // Filter out new members from other guilds that the bot might be in
+
+        log(`A member left the guild ${member.user.id} (${member.user.tag})`)
+
+        em.emit("memberLeft", member);
     });
 
     bot.on("channelUpdate", (oldChannel, newChannel) => {
