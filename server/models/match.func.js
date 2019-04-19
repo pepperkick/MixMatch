@@ -494,6 +494,178 @@ module.exports = (schema, app) => {
         await Discord.sendDiscordMessage(channel, { embed });
     }
 
+    schema.methods.sendMapVoteMenu = async function () {        
+        if (!match.prefs.mapVoteMsg && format.maps.length > 1) {
+            const maps = format.maps;
+            const mapList = "";
+            const fields = [];
+            const embed = {
+                color: 0x00BCD4,
+                title: `Map Vote`,
+                description: "React with the correct number to vote for the map",
+                fields
+            }
+
+            for (let i = 0; i < maps.length; i++) {
+                mapList += `${i+1}: ${maps[i]}`;
+            }
+
+            mapList += `${maps.length+1}: Random Map`;
+
+            fields.push({
+                name: "MapList",
+                value: mapList
+            });
+
+            const message = await server.sendDiscordMessage({
+                embed,
+                text: "@everyone"
+            });
+
+            match.prefs.mapVoteMsg = message.id;
+            match.markModified("prefs");
+
+            await match.save();
+
+            let c = 0;
+
+            while (c !== maps.length + 1) {
+                switch(c) {
+                    case 0: 
+                        await message.react("1️⃣");
+                        break;
+                    case 1: 
+                        await message.react("2️⃣");
+                        break;
+                    case 2: 
+                        await message.react("3️⃣");
+                        break;
+                    case 3: 
+                        await message.react("4️⃣");
+                        break;
+                    case 4: 
+                        await message.react("5️⃣");
+                        break;
+                    case 5: 
+                        await message.react("6️⃣");
+                        break;
+                    case 6: 
+                        await message.react("7️⃣");
+                        break;
+                    case 7: 
+                        await message.react("8️⃣");
+                        break;
+                    case 8: 
+                        await message.react("9️⃣");
+                        break;
+                    case 9: 
+                        await message.react("0️⃣");
+                        break;
+                    case 10: 
+                        await message.react("🇦");
+                        break;
+                    case 11: 
+                        await message.react("🇧");
+                        break;
+                }
+
+                c++;
+            }
+
+            setTimeout(() => {
+                const reactions = message.reactions;
+                const index = -1, highest = -1;
+
+                for (let i in reactions) {
+                    const reaction = reactions[i];
+
+                    switch (reaction.emoji) {
+                        case "1️⃣":
+                            if (reaction.count > reaction.emoji) {
+                                highest = reaction.count;
+                                index = 0;
+                            }
+                            break;
+                        case "2️⃣":
+                            if (reaction.count > reaction.emoji) {
+                                highest = reaction.count;
+                                index = 1;
+                            }
+                            break;
+                        case "3️⃣":
+                            if (reaction.count > reaction.emoji) {
+                                highest = reaction.count;
+                                index = 2;
+                            }
+                            break;
+                        case "4️⃣":
+                            if (reaction.count > reaction.emoji) {
+                                highest = reaction.count;
+                                index = 3;
+                            }
+                            break;
+                        case "5️⃣":
+                            if (reaction.count > reaction.emoji) {
+                                highest = reaction.count;
+                                index = 4;
+                            }
+                            break;
+                        case "6️⃣":
+                            if (reaction.count > reaction.emoji) {
+                                highest = reaction.count;
+                                index = 5;
+                            }
+                            break;
+                        case "7️⃣":
+                            if (reaction.count > reaction.emoji) {
+                                highest = reaction.count;
+                                index = 6;
+                            }
+                            break;
+                        case "8️⃣":
+                            if (reaction.count > reaction.emoji) {
+                                highest = reaction.count;
+                                index = 7;
+                            }
+                            break;
+                        case "9️⃣":
+                            if (reaction.count > reaction.emoji) {
+                                highest = reaction.count;
+                                index = 8;
+                            }
+                            break;
+                        case "0️⃣":
+                            if (reaction.count > reaction.emoji) {
+                                highest = reaction.count;
+                                index = 9;
+                            }
+                            break;
+                        case "🇦":
+                            if (reaction.count > reaction.emoji) {
+                                highest = reaction.count;
+                                index = 10;
+                            }
+                            break;
+                        case "🇧":
+                            if (reaction.count > reaction.emoji) {
+                                highest = reaction.count;
+                                index = 11;
+                            }
+                            break;
+                    }
+                }
+
+                if (index !== -1) {
+                    if (index === maps.length);
+                    else 
+                        match.map = maps[index];
+                }
+
+                match.setStatus(Match.status.SETUP);
+            }, 30 * 1000);
+        }
+    }
+
     schema.pre('save', async function (next) {
         const Server = this.model("Server");
         const server = await Server.findById(this.server);
@@ -546,8 +718,14 @@ module.exports = (schema, app) => {
 
             await match.initPickPlayer();
         } else if (match.status === Match.status.MAPVOTING) {
-            // TODO: Implement map voting
+            await match.sendMapVoteMenu();
         } else if (match.status === Match.status.SETUP) {
+            if (!match.map) {
+                match.map = format.maps[Math.floor(Math.random() * format.maps.length)];
+            
+                return await match.save();
+            }
+
             server.discordRole.setName(`${server.name}: Setting Up`);
             await server.setStatus(Server.status.RESERVED);
 

@@ -12,7 +12,7 @@
 #define LOG_BUFFERSIZE 768
 
 #define ALLOWBOT
-#define GAME_CSGO
+#define GAME_TF2
 
 public Plugin:myinfo = {
     name = "MixMatch",
@@ -54,6 +54,7 @@ public OnPluginStart() {
     RegConsoleCmd("mx_get_teamscores", Command_GetTeamScores);  
 
     HookEvent("player_changename", Event_NameChange, EventHookMode_Post);
+	HookEvent("player_connect", Event_Connect, EventHookMode_Pre);
 
     AddCommandListener(GameCommand_JoinTeam, "jointeam");
 
@@ -241,6 +242,11 @@ public void Event_NameChange(Event event, const char[] name, bool dontBroadcast)
             SetClientName(client, playerName);
         }
     }
+}
+
+public Action Event_Connect(Event event, const char[] name, bool dontBroadcast) {
+    SetEventBroadcast(event, true);
+    return Plugin_Handled;
 }
 
 public void Reset(bool notify) {

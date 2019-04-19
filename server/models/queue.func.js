@@ -223,7 +223,6 @@ module.exports = (schema, app) => {
                 log(`Enough players have joined queue ${queue.name}, finding a free server.`);
 
                 const server = await Server.findFreeServer();
-                const map = format.maps[Math.floor(Math.random() * format.maps.length)];
                 const captains = [];
 
                 if (!server) throw new Error("No free server found!");

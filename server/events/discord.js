@@ -146,7 +146,7 @@ module.exports = app => {
                         await player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
 
                         return;
-                    };
+                    }
 
                     await queue.addPlayer(player);
 
