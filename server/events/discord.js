@@ -147,6 +147,10 @@ module.exports = app => {
 
                         return;
                     }
+                    
+                    if (player.status === Player.status.JOINED) {
+                        await player.queue.removePlayer(player);
+                    }
 
                     await queue.addPlayer(player);
 

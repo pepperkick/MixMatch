@@ -86,7 +86,15 @@ module.exports = (schema, app) => {
 
     schema.methods.getCurrentMatch = async function () {
         const Match = await this.model('Match');
-        const matches = await Match.find({ status: { $in: [ Match.status.SETUP, Match.status.WAITING, Match.status.KNIFE, Match.status.VOTING, Match.status.LIVE ] }, server: this });
+        const matches = await Match.find({ status: { $in: [ 
+            Match.status.PICKING,
+            Match.status.MAPVOTING,
+            Match.status.SETUP, 
+            Match.status.WAITING, 
+            Match.status.KNIFE, 
+            Match.status.VOTING, 
+            Match.status.LIVE
+        ] }, server: this });
 
         if (matches.length > 0) {
             return matches[0];

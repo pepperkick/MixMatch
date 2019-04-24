@@ -251,7 +251,6 @@ module.exports = (schema, app) => {
                         server,
                         players,
                         selected: queue.players,
-                        map,
                         format: queue.format
                     });
 
@@ -268,12 +267,11 @@ module.exports = (schema, app) => {
                     log("Not enough captains present, dividing teams randomly");
                     const players = await queue.divideTeams(server, format); 
                     const match = new Match({
-                        status: Match.status.SETUP,
+                        status: Match.status.MAPVOTING,
                         game: app.config.game,
                         server,
                         players,
                         selected: queue.players,
-                        map,
                         format: queue.format
                     });
     

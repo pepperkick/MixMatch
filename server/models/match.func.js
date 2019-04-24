@@ -1,8 +1,15 @@
 const sleep = require('async-sleep');
+const request = require('async-request');
 const log = require('debug')('app:models:match');
 
 let cache = {};
 let interval = {};
+const list_index = [ "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const list_reactions = [
+    "\u0031\u20E3", "\u0032\u20E3", "\u0033\u20E3", "\u0034\u20E3", 
+    "\u0035\u20E3", "\u0036\u20E3", "\u0037\u20E3", "\u0038\u20E3",
+    "\u0039\u20E3", "\u0030\u20E3"
+];
 
 module.exports = (schema, app) => {
     const statuses = Object.freeze({
@@ -14,6 +21,7 @@ module.exports = (schema, app) => {
         KNIFE: 'KNIFE',
         VOTING: 'VOTING',
         LIVE: 'LIVE',
+        POSTMATCH: 'POSTMATCH',
         ENDED: 'ENDED',
         ERROR: 'ERROR',
         CANCELED: "CANCELED"
@@ -84,9 +92,9 @@ module.exports = (schema, app) => {
     schema.methods.setStatus = async function (status) {
         this.status = status;
         
-        await this.save();
-        
         log(`Match ${this.id}'s status changed to ${this.status}`);
+        
+        await this.save();
     }
 
     schema.methods.handleMapChange = async function (event) {
@@ -236,13 +244,13 @@ module.exports = (schema, app) => {
 
     schema.methods.handleOnMatchEnd = async function (event) {
         if (this.status === statuses.LIVE) {
-            this.setStatus(statuses.ENDED);
+            this.setStatus(statuses.POSTMATCH);
         }
     }
 
     schema.methods.handleGameOver = async function (event) {
         if (this.status === statuses.LIVE) {
-            this.setStatus(statuses.ENDED);
+            this.setStatus(statuses.POSTMATCH);
         }
     }
 
@@ -353,7 +361,7 @@ module.exports = (schema, app) => {
         if (this.selected.length == 1) {
             return await this.pickPlayer(0);
         } else if (this.selected.length == 0) {
-            return await this.setStatus(statuses.SETUP);
+            return await this.setStatus(statuses.MAPVOTING);
         }
 
         const fields = [];
@@ -470,34 +478,150 @@ module.exports = (schema, app) => {
         return player;
     }
 
-    schema.methods.postEndResult = async function () {
-        const channel = app.config.discord.main;
-        const fields = [];
-        const embed = {
-            color: 0x00BCD4,
-            title: `Match Complete`,
-            fields
+    schema.methods.checkEndResult = async function () {
+        const Player = this.model("Player");
+
+        if (app.config.game === "tf2") {
+            if (app.config.logstf) {
+                try {
+                    log("Checking for logstf");
+                    const res = await request(`http://logs.tf/api/v1/log?uploader=${app.config.logstf.uploader}&map=${this.map}`);
+                    const body = JSON.parse(res.body);
+                    const id = body.logs[0] ? body.logs[0].id : -1;
+    
+                    if (id !== -1)
+                        this.prefs.logstf = id;
+                } catch (error) {
+                    log("Failed to check for logstf due to error", error)
+                }
+            }
+
+            if (app.config.demostf) {
+                try {
+                    log("Checking for demostf");
+                    const res = await request(`https://api.demos.tf/uploads/${app.config.demostf.uploader}?map=${this.map}`);
+                    const body = JSON.parse(res.body);
+                    const id = body[0] ? body[0].id : -1;
+    
+                    if (id !== -1)
+                        this.prefs.demostf = id;
+                } catch (error) {
+                    log("Failed to check for demostf due to error", error)
+                }
+            }
+
+            if (this.prefs.logstf) {
+                try {
+                    log("Checking for logstf results");
+
+                    const res = await request(`http://logs.tf/api/v1/log/${this.prefs.logstf}`);
+                    const body = JSON.parse(res.body);
+                    
+                    this.prefs.scores = {};
+                    this.prefs.scores.team1 = body.teams.Blue.score;
+                    this.prefs.scores.team2 = body.teams.Red.score;
+                    
+                    if (this.prefs.scores.team1 > this.prefs.scores.team2) {
+                        this.prefs.winner = 0;
+                    } else if (this.prefs.scores.team1 < this.prefs.scores.team2) {
+                        this.prefs.winner = 1;
+                    } else {
+                        this.prefs.winner = -1;
+                    }    
+                } catch (error) {
+                    log("Failed to check for logstf results due to error", error)
+                }
+            }
         }
 
-        fields.push({
-            name: 'Format',
-            value: this.format,
-            inline: true
-        });
+        if (app.config.discord.channels.log) {
+            try {
+                log("Sending match result");
+                const channel = app.config.discord.channels.log;
+                const fields = [];
+                const embed = {
+                    color: 0x00BCD4,
+                    title: `Match Complete`,
+                    fields
+                }
+                
+                let teamA = "";    
+                let teamB = "";
+    
+                for (let i in this.players) {
+                    const player = await Player.findById(i);
+                    const matchPlayer = this.players[i];
 
-        fields.push({
-            name: 'Map',
-            value: this.map,
-            inline: true
-        });
+                    if (matchPlayer.team === "A") {
+                        if (this.prefs.winner === 1)
+                            teamA += `**${player.discordMember.user.tag}**\n`
+                        else 
+                            teamA += `${player.discordMember.user.tag}\n`
+                    } else if (matchPlayer.team === "B") {
+                        if (this.prefs.winner === 0)
+                            teamB += `**${player.discordMember.user.tag}**\n`
+                        else 
+                            teamB += `${player.discordMember.user.tag}\n`
+                    }
+                }
 
-        await Discord.sendDiscordMessage(channel, { embed });
+                fields.push({
+                    name: app.config.teams.A.name,
+                    value: teamA,
+                    inline: true
+                });
+
+                fields.push({
+                    name: app.config.teams.B.name,
+                    value: teamB,
+                    inline: true
+                });
+
+                fields.push({
+                    name: 'Format',
+                    value: this.format
+                });
+    
+                fields.push({
+                    name: 'Map',
+                    value: this.map,
+                    inline: true
+                });
+    
+                if (app.config.game === "tf2") {
+                    if (this.prefs.logstf) {
+                        fields.push({
+                            name: 'Logs.tf',
+                            value: `http://logs.tf/${this.prefs.logstf}`
+                        });
+                    }
+    
+                    if (this.prefs.demostf) {
+                        fields.push({
+                            name: 'Demos.tf',
+                            value: `https://demos.tf/${this.prefs.demostf}`
+                        });
+                    }
+                }
+                
+                await app.discord.sendToChannel(channel, { embed });
+            } catch (error) {
+                log("Failed to send match result due to error", error);
+            }
+        }
+
+        this.markModified("prefs");
+        await this.setStatus(statuses.ENDED);
     }
 
     schema.methods.sendMapVoteMenu = async function () {        
-        if (!match.prefs.mapVoteMsg && format.maps.length > 1) {
+        const Server = this.model("Server");
+
+        const format = app.config.formats[this.format];
+        const server = await Server.findById(this.server);
+
+        if (!this.prefs.mapVoteMsg && format.maps.length > 1) {
             const maps = format.maps;
-            const mapList = "";
             const fields = [];
             const embed = {
                 color: 0x00BCD4,
@@ -505,12 +629,13 @@ module.exports = (schema, app) => {
                 description: "React with the correct number to vote for the map",
                 fields
             }
+            let mapList = "";
 
             for (let i = 0; i < maps.length; i++) {
-                mapList += `${i+1}: ${maps[i]}`;
+                mapList += `${list_index[i+1]}: ${maps[i]}\n`;
             }
 
-            mapList += `${maps.length+1}: Random Map`;
+            mapList += `${list_index[maps.length+1]}: Random Map`;
 
             fields.push({
                 name: "MapList",
@@ -522,147 +647,51 @@ module.exports = (schema, app) => {
                 text: "@everyone"
             });
 
-            match.prefs.mapVoteMsg = message.id;
-            match.markModified("prefs");
+            this.prefs.mapVoteMsg = message.id;
+            this.markModified("prefs");
 
-            await match.save();
+            await this.save();
 
             let c = 0;
 
             while (c !== maps.length + 1) {
-                switch(c) {
-                    case 0: 
-                        await message.react("1️⃣");
-                        break;
-                    case 1: 
-                        await message.react("2️⃣");
-                        break;
-                    case 2: 
-                        await message.react("3️⃣");
-                        break;
-                    case 3: 
-                        await message.react("4️⃣");
-                        break;
-                    case 4: 
-                        await message.react("5️⃣");
-                        break;
-                    case 5: 
-                        await message.react("6️⃣");
-                        break;
-                    case 6: 
-                        await message.react("7️⃣");
-                        break;
-                    case 7: 
-                        await message.react("8️⃣");
-                        break;
-                    case 8: 
-                        await message.react("9️⃣");
-                        break;
-                    case 9: 
-                        await message.react("0️⃣");
-                        break;
-                    case 10: 
-                        await message.react("🇦");
-                        break;
-                    case 11: 
-                        await message.react("🇧");
-                        break;
-                }
+                await message.react(list_reactions[c]);
 
                 c++;
             }
 
             setTimeout(() => {
-                const reactions = message.reactions;
-                const index = -1, highest = -1;
+                log("Checking map votes...");
+
+                const reactions = message.reactions.array();
+                let highestIndex = -1, highest = -1;
 
                 for (let i in reactions) {
                     const reaction = reactions[i];
-
-                    switch (reaction.emoji) {
-                        case "1️⃣":
-                            if (reaction.count > reaction.emoji) {
-                                highest = reaction.count;
-                                index = 0;
-                            }
-                            break;
-                        case "2️⃣":
-                            if (reaction.count > reaction.emoji) {
-                                highest = reaction.count;
-                                index = 1;
-                            }
-                            break;
-                        case "3️⃣":
-                            if (reaction.count > reaction.emoji) {
-                                highest = reaction.count;
-                                index = 2;
-                            }
-                            break;
-                        case "4️⃣":
-                            if (reaction.count > reaction.emoji) {
-                                highest = reaction.count;
-                                index = 3;
-                            }
-                            break;
-                        case "5️⃣":
-                            if (reaction.count > reaction.emoji) {
-                                highest = reaction.count;
-                                index = 4;
-                            }
-                            break;
-                        case "6️⃣":
-                            if (reaction.count > reaction.emoji) {
-                                highest = reaction.count;
-                                index = 5;
-                            }
-                            break;
-                        case "7️⃣":
-                            if (reaction.count > reaction.emoji) {
-                                highest = reaction.count;
-                                index = 6;
-                            }
-                            break;
-                        case "8️⃣":
-                            if (reaction.count > reaction.emoji) {
-                                highest = reaction.count;
-                                index = 7;
-                            }
-                            break;
-                        case "9️⃣":
-                            if (reaction.count > reaction.emoji) {
-                                highest = reaction.count;
-                                index = 8;
-                            }
-                            break;
-                        case "0️⃣":
-                            if (reaction.count > reaction.emoji) {
-                                highest = reaction.count;
-                                index = 9;
-                            }
-                            break;
-                        case "🇦":
-                            if (reaction.count > reaction.emoji) {
-                                highest = reaction.count;
-                                index = 10;
-                            }
-                            break;
-                        case "🇧":
-                            if (reaction.count > reaction.emoji) {
-                                highest = reaction.count;
-                                index = 11;
-                            }
-                            break;
+                    const index = list_reactions.indexOf(reaction.emoji.name);
+                    
+                    if (index != -1) {
+                        if (reaction.count > highest) {
+                            highest = reaction.count;
+                            highestIndex = index;
+                        }
                     }
                 }
 
-                if (index !== -1) {
-                    if (index === maps.length);
+                if (highestIndex !== -1) {
+                    if (highestIndex === maps.length);
                     else 
-                        match.map = maps[index];
+                        this.map = maps[highestIndex];
                 }
 
-                match.setStatus(Match.status.SETUP);
-            }, 30 * 1000);
+                if (this.map) {
+                    log(`Highest voted map ${this.map}`);
+                } else {
+                    log("Random map will be selected", highestIndex, highest);
+                }
+
+                this.setStatus(statuses.SETUP);
+            }, 10 * 1000);
         }
     }
 
@@ -704,153 +733,152 @@ module.exports = (schema, app) => {
         const format = config.formats[match.format];
         const server = await Server.findById(match.server);
 
-        if (match.status === Match.status.PICKING) {
-            server.discordRole.setName(`${server.name}: Picking`);
-
-            if (!match.prefs.createdChannels) {
+        if (!match.prefs.createdChannels) {
+            try {
                 await server.createDiscordChannels();     
                 
                 match.prefs.createdChannels = true;
                 match.markModified("prefs");
-
-                await match.save();
-            }
-
-            await match.initPickPlayer();
-        } else if (match.status === Match.status.MAPVOTING) {
-            await match.sendMapVoteMenu();
-        } else if (match.status === Match.status.SETUP) {
-            if (!match.map) {
-                match.map = format.maps[Math.floor(Math.random() * format.maps.length)];
-            
+    
                 return await match.save();
+            } catch (error) {
+                log("Failed to create discord channels due to error", error);
             }
+        }
 
-            server.discordRole.setName(`${server.name}: Setting Up`);
-            await server.setStatus(Server.status.RESERVED);
+        try {
 
-            if (!match.prefs.createdChannels) {
-                await server.createDiscordChannels();     
+            if (match.status === Match.status.PICKING) {
+                server.discordRole.setName(`${server.name}: Picking`);
+                await match.initPickPlayer();
+            } else if (match.status === Match.status.MAPVOTING) {
+                await match.sendMapVoteMenu();
+            } else if (match.status === Match.status.SETUP) {
+                if (!match.map) {
+                    match.map = format.maps[Math.floor(Math.random() * format.maps.length)];
                 
-                match.prefs.createdChannels = true;
-                match.markModified("prefs");
-
-                await match.save();
+                    return await match.save();
+                }
+    
+                server.discordRole.setName(`${server.name}: Setting Up`);
+                await server.setStatus(Server.status.RESERVED);
+                await server.moveDiscordPlayers();
+                await server.commands.changeLevel(match.map);
+                await server.save();
+            } else if (match.status === Match.status.WAITING) {
+                server.discordRole.setName(`${server.name}: Waiting (0/${format.size * 2})`);
+                
+                if (!interval[match.id.toString()]) {
+                    interval[match.id.toString()] = setInterval(function () {
+                        checkMatchStatus(match, interval);
+                    }, 30000);
+                }
+    
+                if (!match.prefs.announced) {
+                    await server.sendDiscordMessage({                    
+                        text: `@everyone Server is ready, join at\n
+                        URL: steam://connect/${server.ip}:${server.port}\n
+                        Console: connect ${server.ip}:${server.port}\n
+                        IP: ${server.ip}:${server.port}`,
+                    });
+    
+                    await server.sendDiscordMessage({ 
+                        embed: {
+                            color: 0x00BCD4,
+                            title: `Server ${server.name}`,
+                            fields: [
+                                {
+                                    name: 'Status',
+                                    value: 'Waiting for players to join'
+                                },
+                                {
+                                    name: "Connect",
+                                    value: `steam://connect/${server.ip}:${server.port}`,
+                                    inline: false
+                                },
+                                {
+                                    name: 'Format',
+                                    value: match.format,
+                                    inline: true
+                                },  
+                                {
+                                    name: 'Map',
+                                    value: match.map,
+                                    inline: false
+                                } 
+                            ],
+                            timestamp: new Date()
+                        }
+                    });
+    
+                    match.prefs.announced = true;
+                    match.markModified("prefs");
+    
+                    await match.save();
+                }
+            } else if (match.status === Match.status.KNIFE) {
+                server.discordRole.setName(`${server.name}: Knife Round`);
+                if (interval[match.id.toString()]) {
+                    clearInterval(interval[match.id.toString()]);
+                    interval[match.id.toString()] = null;
+                }
+            }  else if (match.status === Match.status.VOTING) {
+                server.discordRole.setName(`${server.name}: Voting`);
+            } else if (match.status === Match.status.LIVE) {
+                server.discordRole.setName(`${server.name}: Live`);
+                if (interval[match.id.toString()]) {
+                    clearInterval(interval[match.id.toString()]);
+                    interval[match.id.toString()] = null;
+                }
+            } else if (match.status === Match.status.POSTMATCH) {
+                server.discordRole.setName(`${server.name}: Ended`);      
+                
+                await sleep(5 * 1000);
+    
+                for (let i in match.players) {
+                    const player = await Player.findById(i);
+    
+                    player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
+                    player.discordMember.removeRole(server.role);
+                    player.discordMember.removeRole(app.config.teams.A.role);
+                    player.discordMember.removeRole(app.config.teams.B.role);
+                }
+    
+                // await sleep(30 * 1000);
+                log("Checking for match results");
+                await match.checkEndResult();
+            }  else if (match.status === Match.status.ENDED) {
+                await server.setStatus(Server.status.FREE);  
+                await server.commands.changeLevel(match.map);
+            } else if (match.status === Match.status.ERROR) {     
+                for (let i in match.players) {
+                    const player = await Player.findById(i);
+    
+                    player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
+                    player.discordMember.removeRole(server.role);
+                    player.discordMember.removeRole(app.config.teams.A.role);
+                    player.discordMember.removeRole(app.config.teams.B.role);
+                }
+    
+                await sleep(30 * 1000);  
+                await server.setStatus(Server.status.FREE);  
+            }  else if (match.status === Match.status.CANCELED) {     
+                for (let i in match.players) {
+                    const player = await Player.findById(i);
+    
+                    player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
+                    player.discordMember.removeRole(server.role);
+                    player.discordMember.removeRole(app.config.teams.A.role);
+                    player.discordMember.removeRole(app.config.teams.B.role);
+                }
+    
+                await sleep(30 * 1000);
+                await server.setStatus(Server.status.FREE);  
+            } else {   
+                await match.setStatus(Match.status.ERROR);  
             }
-
-            await server.moveDiscordPlayers();
-            await server.commands.changeLevel(match.map);
-            await server.save();
-        } else if (match.status === Match.status.WAITING) {
-            server.discordRole.setName(`${server.name}: Waiting (0/${format.size * 2})`);
-            
-            if (!interval[match.id.toString()]) {
-                interval[match.id.toString()] = setInterval(function () {
-                    checkMatchStatus(match, interval);
-                }, 30000);
-            }
-
-            if (!match.prefs.announced) {
-                await server.sendDiscordMessage({                    
-                    text: `@everyone Server is ready, join at\n
-                    URL: steam://connect/${server.ip}:${server.port}\n
-                    Console: connect ${server.ip}:${server.port}\n
-                    IP: ${server.ip}:${server.port}`,
-                });
-
-                await server.sendDiscordMessage({ 
-                    embed: {
-                        color: 0x00BCD4,
-                        title: `Server ${server.name}`,
-                        fields: [
-                            {
-                                name: 'Status',
-                                value: 'Waiting for players to join'
-                            },
-                            {
-                                name: "Connect",
-                                value: `steam://connect/${server.ip}:${server.port}`,
-                                inline: false
-                            },
-                            {
-                                name: 'Format',
-                                value: match.format,
-                                inline: true
-                            },  
-                            {
-                                name: 'Map',
-                                value: match.map,
-                                inline: false
-                            } 
-                        ],
-                        timestamp: new Date()
-                    }
-                });
-
-                match.prefs.announced = true;
-                match.markModified("prefs");
-
-                await match.save();
-            }
-        } else if (match.status === Match.status.KNIFE) {
-            server.discordRole.setName(`${server.name}: Knife Round`);
-            if (interval[match.id.toString()]) {
-                clearInterval(interval[match.id.toString()]);
-                interval[match.id.toString()] = null;
-            }
-        }  else if (match.status === Match.status.VOTING) {
-            server.discordRole.setName(`${server.name}: Voting`);
-        } else if (match.status === Match.status.LIVE) {
-            server.discordRole.setName(`${server.name}: Live`);
-            if (interval[match.id.toString()]) {
-                clearInterval(interval[match.id.toString()]);
-                interval[match.id.toString()] = null;
-            }
-        } else if (match.status === Match.status.ENDED) {
-            server.discordRole.setName(`${server.name}: Ended`);      
-            
-            await sleep(5 * 1000);
-
-            for (let i in match.players) {
-                const player = await Player.findById(i);
-
-                player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
-                player.discordMember.removeRole(server.role);
-                player.discordMember.removeRole(app.config.teams.A.role);
-                player.discordMember.removeRole(app.config.teams.B.role);
-            }
-
-            await sleep(30 * 1000);
-
-            await server.setStatus(Server.status.FREE);  
-            // await match.postEndResult();
-            await server.commands.changeLevel(match.map);
-        } else if (match.status === Match.status.ERROR) {     
-            for (let i in match.players) {
-                const player = await Player.findById(i);
-
-                player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
-                player.discordMember.removeRole(server.role);
-                player.discordMember.removeRole(app.config.teams.A.role);
-                player.discordMember.removeRole(app.config.teams.B.role);
-            }
-
-            await sleep(30 * 1000);  
-            await server.setStatus(Server.status.FREE);  
-        }  else if (match.status === Match.status.CANCELED) {     
-            for (let i in match.players) {
-                const player = await Player.findById(i);
-
-                player.discordMember.setVoiceChannel(app.config.discord.channels.generalvc); 
-                player.discordMember.removeRole(server.role);
-                player.discordMember.removeRole(app.config.teams.A.role);
-                player.discordMember.removeRole(app.config.teams.B.role);
-            }
-
-            await sleep(30 * 1000);
-            await server.setStatus(Server.status.FREE);  
-        } else {   
-            await match.setStatus(Match.status.ERROR);  
+        } catch (error) {
+            log(`Failed to execute match status ${match.status} due to error`, error);
         }
     });
 

@@ -135,28 +135,17 @@ module.exports = async (app) => {
     async function checkMatches() {
         log("Checking for ongoing matches");
 
-        const matches_picking = await Match.find({ status: Match.status.PICKING });
+        const matches = await Match.find({ status: { $in: [ 
+            Match.status.PICKING,
+            Match.status.MAPVOTING,
+            Match.status.SETUP,
+            Match.status.WAITING,
+            Match.status.LIVE,
+            Match.status.POSTMATCH,
+        ] } });
 
-        for (let match of matches_picking) {
-            await match.setStatus(Match.status.PICKING);
-        }
-
-        const matches_setup = await Match.find({ status: Match.status.SETUP });
-
-        for (let match of matches_setup) {
-            await match.setStatus(Match.status.SETUP);
-        }
-
-        const matches_waiting = await Match.find({ status: Match.status.WAITING });
-
-        for (let match of matches_waiting) {
-            await match.setStatus(Match.status.WAITING);
-        }
-
-        const matches_live = await Match.find({ status: Match.status.LIVE });
-
-        for (let match of matches_live) {
-            await match.setStatus(Match.status.LIVE);
+        for (let match of matches) {
+            await match.setStatus(match.status);
         }
     }
 
